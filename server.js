@@ -8,62 +8,93 @@ const io = new Server(server);
 
 app.use(express.static('public'));
 
-// Lưu trữ bảng điểm Grand Prix trong bộ nhớ Server
 let leaderboard = {}; 
-let currentCorrectAnswer = '';
+let currentQuestion = null; // Bộ nhớ lưu câu hỏi đang diễn ra
+let answeredUsers = new Set(); // Sổ Nam Tào lưu những bé ĐÃ NỘP BÀI câu hiện tại
 
 io.on('connection', (socket) => {
     console.log('Người dùng kết nối:', socket.id);
 
-    // Học trò hoặc HLV tham gia phòng
-    socket.on('join', (name) => {
-        socket.username = name || 'Ẩn danh';
+    socket.on('join', (data) => {
+        socket.username = data.name || 'Ẩn danh';
+        socket.role = data.role; // Phân biệt HLV và Học trò ngay từ đầu
         
-        // Nếu là học trò và chưa có trong Bảng Vàng thì khởi tạo 0 điểm
-        if (name !== 'HLV' && !leaderboard[socket.username]) {
+        // VẤN ĐỀ 3: Chỉ thêm vào Bảng Vàng nếu role là 'student' (Học trò)
+        if (socket.role === 'student' && !leaderboard[socket.username]) {
             leaderboard[socket.username] = 0;
         }
         
-        // Gửi Bảng Vàng cập nhật cho tất cả mọi người
         io.emit('update_leaderboard', leaderboard);
+
+        // VẤN ĐỀ 1: Học trò văng mạng vào lại, hoặc vào trễ
+        // Nếu có câu hỏi đang chạy và thời gian chưa kết thúc, gửi riêng cho bé này
+        if (currentQuestion && socket.role === 'student') {
+            let timeLeft = Math.round((currentQuestion.endTime - Date.now()) / 1000);
+            if (timeLeft > 0 && !answeredUsers.has(socket.username)) {
+                socket.emit('new_question', {
+                    fen: currentQuestion.fen,
+                    a: currentQuestion.a,
+                    b: currentQuestion.b,
+                    c: currentQuestion.c,
+                    d: currentQuestion.d,
+                    seconds: timeLeft // Chỉ cấp cho thời gian còn sót lại của câu hỏi
+                });
+            }
+        }
     });
 
-    // HLV phát đề bài mới (Gồm thế cờ FEN, 4 đáp án, đáp án đúng và thời gian)
     socket.on('send_question', (data) => {
-        currentCorrectAnswer = data.correctAnswer; // Lưu đáp án đúng hiện tại (A, B, C hoặc D)
+        let seconds = parseInt(data.seconds) || 30;
         
-        // Phát dữ liệu câu hỏi tới tất cả học trò
+        // Lưu lại trạng thái câu hỏi lên bộ nhớ Server
+        currentQuestion = {
+            fen: data.fen,
+            a: data.a,
+            b: data.b,
+            c: data.c,
+            d: data.d,
+            correctAnswer: data.correctAnswer,
+            endTime: Date.now() + (seconds * 1000) // Mốc thời gian kết thúc
+        };
+        
+        // Xóa sạch sổ Nam Tào để chuẩn bị cho câu mới
+        answeredUsers.clear(); 
+        
         io.emit('new_question', {
             fen: data.fen,
             a: data.a,
             b: data.b,
             c: data.c,
             d: data.d,
-            seconds: parseInt(data.seconds) || 30
+            seconds: seconds
         });
     });
 
-    // Học trò nộp đáp án câu hỏi
     socket.on('submit_answer', (selectedOption) => {
-        const isCorrect = selectedOption === currentCorrectAnswer;
+        if (socket.role === 'coach') return; // Đề phòng HLV bấm lộn
+
+        // VẤN ĐỀ 2 (Khóa phía Server): Nếu đã có tên trong sổ thì ngó lơ lệnh này luôn
+        if (answeredUsers.has(socket.username)) {
+            return; 
+        }
+        answeredUsers.add(socket.username); // Chưa có thì ghi danh vào sổ
+
+        const isCorrect = currentQuestion && selectedOption === currentQuestion.correctAnswer;
         
-        // Nếu trả lời đúng thì cộng 10 điểm vào hệ thống Grand Prix
-        if (isCorrect && socket.username && leaderboard[socket.username] !== undefined) {
+        // Trả lời đúng thì cộng điểm
+        if (isCorrect && leaderboard[socket.username] !== undefined) {
             leaderboard[socket.username] += 10;
         }
 
-        // Báo kết quả riêng câu này cho HLV biết
         io.emit('coach_receive', {
             name: socket.username,
             answer: selectedOption,
             isCorrect: isCorrect
         });
 
-        // Cập nhật lại Bảng Vàng cho cả lớp cùng thấy sự thay đổi thứ hạng
         io.emit('update_leaderboard', leaderboard);
     });
 
-    // Tính năng cho phép HLV reset toàn bộ điểm số Bảng Vàng về 0
     socket.on('reset_scores', () => {
         for (let user in leaderboard) {
             leaderboard[user] = 0;
@@ -72,7 +103,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// Sử dụng cổng của môi trường (Render) hoặc mặc định là 3000
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Hệ thống đang chạy tại cổng: ${PORT}`);

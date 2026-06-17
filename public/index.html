@@ -19,7 +19,7 @@
         .btn-danger:hover { background-color: #bd2130; }
         
         /* Khu vực bàn cờ */
-        .board-box { margin: 15px auto; max-width: 400px; }
+        .board-box { margin: 15px auto; max-width: 400px; text-align: center; }
         img.board { width: 100%; border: 4px solid #34495e; border-radius: 8px; background-color: #ddd; }
         
         /* Đếm ngược và Trạng thái */
@@ -33,7 +33,7 @@
         
         /* Bố cục chia hai cột cho HLV */
         .coach-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; }
-        .log-box { background: #f8f9fa; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; height: 250px; overflow-y: auto; }
+        .log-box { background: #f8f9fa; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; height: 180px; overflow-y: auto; }
         
         /* Bảng Vàng Grand Prix */
         .leaderboard-section { margin-top: 30px; border-top: 2px dashed #cbd5e1; padding-top: 20px; }
@@ -42,6 +42,11 @@
         th { background-color: #34495e; color: white; border-radius: 4px 4px 0 0; }
         tr:nth-child(even) { background-color: #f8f9fa; }
         .rank-1 { font-weight: bold; color: #f1c40f; }
+
+        /* Responsive cho điện thoại */
+        @media (max-width: 768px) {
+            .coach-layout { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -59,7 +64,7 @@
         <div id="student-screen" class="hidden">
             <h2>Giải Thế Cờ Học Phần</h2>
             <div class="board-box">
-                <img id="student-board" src="" alt="Đang đợi thế cờ từ thầy...">
+                <img id="student-board" class="board" src="https://lichess1.org/export/fen.gif?fen=r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R%20w%20KQkq%20-%200%204" alt="Đang đợi thế cờ từ thầy...">
             </div>
             <div id="timer">00:00</div>
             <p id="student-status" class="status-text">Đang chờ thầy thiết lập đề bài...</p>
@@ -77,7 +82,7 @@
             <div class="coach-layout">
                 <div>
                     <h3>Thiết kế câu hỏi mới</h3>
-                    <label>Chuỗi FEN thế cờ (Để trống nếu dùng thế mặc định):</label>
+                    <label>Chuỗi FEN thế cờ (Để trống dùng mặc định):</label>
                     <input type="text" id="input-fen" placeholder="r1bqk1nr/pppp1ppp/... w KQkq -">
                     
                     <label>Đáp án câu A:</label> <input type="text" id="input-a" value="Ng5">
@@ -101,7 +106,9 @@
                 </div>
                 
                 <div>
-                    <h3>Trạng thái thời gian thực</h3>
+                    <div class="board-box" style="margin-top:0;">
+                        <img id="coach-board" class="board" src="https://lichess1.org/export/fen.gif?fen=r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R%20w%20KQkq%20-%200%204" alt="Bàn cờ HLV">
+                    </div>
                     <div id="timer-coach">Còn lại: --s</div>
                     <h3>Nhật ký học trò nộp đáp án:</h3>
                     <div id="coach-logs" class="log-box"></div>
@@ -132,7 +139,6 @@
         let myRole = '';
         let myName = '';
         let countdownInterval;
-        // Thế cờ Khai cuộc Italian mặc định phòng khi thầy để trống FEN
         const defaultFEN = "r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4";
 
         function joinRoom(role) {
@@ -156,10 +162,16 @@
             }
         }
 
+        // TÍNH NĂNG MỚI: Tự động đổi ảnh bàn cờ HLV khi vừa dán chuỗi FEN
+        document.getElementById('input-fen').addEventListener('input', function(e) {
+            let fen = e.target.value.trim() || defaultFEN;
+            let encodedFen = encodeURIComponent(fen);
+            document.getElementById('coach-board').src = `https://lichess1.org/export/fen.gif?fen=${encodedFen}`;
+        });
+
         // HLV nhấn nút phát đề
         function sendQuestion() {
             let fen = document.getElementById('input-fen').value.trim() || defaultFEN;
-            // Mã hóa chuỗi FEN để chèn an toàn vào URL sinh ảnh của Lichess
             let encodedFen = encodeURIComponent(fen);
 
             const data = {
@@ -173,7 +185,7 @@
             };
 
             socket.emit('send_question', data);
-            document.getElementById('coach-logs').innerHTML = ''; // Xóa nhật ký câu cũ
+            document.getElementById('coach-logs').innerHTML = ''; 
         }
 
         // Học trò bấm chọn đáp án trắc nghiệm
@@ -184,19 +196,16 @@
         }
 
         function resetLeaderboard() {
-            if(confirm("Bro có chắc chắn muốn đưa điểm số cả lớp về lại 0 không?")) {
+            if(confirm("Xác nhận đưa điểm số cả lớp về lại 0?")) {
                 socket.emit('reset_scores');
             }
         }
 
-        // LẮNG NGHE SỰ KIỆN TỪ SERVER TRUYỀN XUỐNG
-        
-        // Nhận đề bài mới từ HLV
+        // LẮNG NGHE SỰ KIỆN TỪ SERVER
         socket.on('new_question', (data) => {
             clearInterval(countdownInterval);
             let timeLeft = data.seconds;
 
-            // Đồng bộ ảnh bàn cờ động dựa trên chuỗi FEN qua API của Lichess
             const boardUrl = `https://lichess1.org/export/fen.gif?fen=${data.fen}`;
             
             if (myRole === 'student') {
@@ -210,7 +219,6 @@
                 document.getElementById('student-status').innerText = "Suy nghĩ kỹ và bấm chọn:";
             }
 
-            // Quản lý đếm ngược thời gian đồng bộ cả 2 màn hình
             countdownInterval = setInterval(() => {
                 let displayStr = `Còn lại: ${timeLeft} Giây`;
                 if (myRole === 'student') {
@@ -234,24 +242,21 @@
             }, 1000);
         });
 
-        // HLV nhận trực tiếp đáp án của từng học trò gửi lên
         socket.on('coach_receive', (data) => {
             if (myRole === 'coach') {
                 const logs = document.getElementById('coach-logs');
                 const textStyle = data.isCorrect ? "color:#27ae60; font-weight:bold;" : "color:#c0392b;";
-                const statusSymbol = data.isCorrect ? "✅ ĐÚNG" : "❌ SÁI";
+                const statusSymbol = data.isCorrect ? "✅ ĐÚNG" : "❌ SAI";
                 
-                logs.innerHTML += `<p>• Học trò <b>${data.name}</b> đã chọn câu [${data.answer}] -> <span style="${textStyle}">${statusSymbol}</span></p>`;
-                logs.scrollTop = logs.scrollHeight; // Tự động cuộn xuống dưới cùng
+                logs.innerHTML += `<p>• Học trò <b>${data.name}</b> chọn câu [${data.answer}] -> <span style="${textStyle}">${statusSymbol}</span></p>`;
+                logs.scrollTop = logs.scrollHeight; 
             }
         });
 
-        // Cập nhật giao diện Bảng Vàng tích lũy Grand Prix toàn thời gian
         socket.on('update_leaderboard', (leaderboard) => {
             const tbody = document.getElementById('leaderboard-body');
             tbody.innerHTML = '';
 
-            // Sắp xếp mảng học trò theo thứ tự điểm số giảm dần
             let sortedArr = Object.entries(leaderboard).sort((a, b) => b[1] - a[1]);
 
             sortedArr.forEach((item, index) => {

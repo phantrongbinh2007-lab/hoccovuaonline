@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đấu Trường Cờ Vua Grand Prix - Đồ Họa Cao Cấp</title>
+    <title>Đấu Trường Cờ Vua Grand Prix - Đa Chế Độ</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
@@ -17,7 +17,6 @@
         .btn-danger { background-color: #dc3545; }
         .btn-danger:hover { background-color: #bd2130; }
         
-        /* ĐỊNH DẠNG KHUNG BÀN CỜ 8X8 ĐỐI XỨNG TUYỆT ĐỐI */
         .board-box { margin: 15px auto; max-width: 400px; width: 100%; }
         .chess-board {
             display: grid;
@@ -43,7 +42,6 @@
         .square.dark { background-color: #b58863; }
         .square.selected { background-color: #74b9ff !important; } 
         
-        /* Định dạng quân cờ hình ảnh SVG sắc nét */
         .piece-img {
             width: 90%;
             height: 90%;
@@ -100,7 +98,7 @@
                 <button class="btn btn-ans" onclick="submitQuizAnswer('A')">A: <span id="text-a"></span></button>
                 <button class="btn btn-ans" onclick="submitQuizAnswer('B')">B: <span id="text-b"></span></button>
                 <button class="btn btn-ans" onclick="submitQuizAnswer('C')">C: <span id="text-c"></span></button>
-                <button class="btn btn-ans" onclick="submitAnswer('D')">D: <span id="text-d"></span></button>
+                <button class="btn btn-ans" onclick="submitQuizAnswer('D')">D: <span id="text-d"></span></button>
             </div>
 
             <div id="submit-btn-area" class="hidden" style="text-align:center; margin: 15px 0;">
@@ -138,8 +136,8 @@
                     </div>
 
                     <div id="area-move-inputs" class="hidden">
-                        <label>Nước đi đúng (Bốc cờ trực tiếp trên bàn cờ bên phải để tự điền):</label>
-                        <input type="text" id="input-correct-move" placeholder="Ví dụ: e2-e4" style="font-weight:bold; color:#d35400; background:#fffdf0;" readonly>
+                        <label>Nước đi đúng mẫu hệ thống ghi nhận:</label>
+                        <input type="text" id="input-correct-move" placeholder="Bốc cờ bên phải để tự động điền..." style="font-weight:bold; color:#d35400; background:#fffdf0;" readonly>
                     </div>
                     
                     <label>Thời gian suy nghĩ (giây):</label>
@@ -154,7 +152,7 @@
                         <div id="coach-board" class="chess-board"></div>
                     </div>
                     <div id="timer-coach">Còn lại: --s</div>
-                    <h3>Nhật ký học trò nộp đáp án (Kèm đồng hồ tính giây):</h3>
+                    <h3>Nhật ký học trò nộp đáp án:</h3>
                     <div id="coach-logs" class="log-box"></div>
                 </div>
             </div>
@@ -168,6 +166,7 @@
                         <th>Hạng</th>
                         <th>Học Trò</th>
                         <th>Điểm Tích Lũy</th>
+                        <th>⏱️ Tổng Thời Gian Tốn</th>
                     </tr>
                 </thead>
                 <tbody id="leaderboard-body"></tbody>
@@ -188,7 +187,6 @@
         let currentRecordedMove = '';
         let currentActiveType = 'quiz'; 
 
-        // ĐƯỜNG DẪN BỘ ĐỒ HỌA VECTOR SVG CHUẨN QUỐC TẾ SIÊU ĐẸP
         const pieceImages = {
             'P': 'https://upload.wikimedia.org/wikipedia/commons/4/45/Chess_plt45.svg',
             'R': 'https://upload.wikimedia.org/wikipedia/commons/7/72/Chess_rlt45.svg',
@@ -254,7 +252,6 @@
             }
         }
 
-        // HÀM GIẢI MÃ CHUỖI FEN AN TOÀN CHUẨN 8 HÀNG
         function parseAndDrawFEN(fen, boardId, isClickable) {
             localBoardState = {};
             const parts = fen.split(' ');
@@ -264,7 +261,7 @@
             for (let r = 0; r < 8; r++) {
                 const rank = 8 - r;
                 let fileIdx = 0;
-                const rowStr = rows[r] || "8"; // Bảo vệ nếu chuỗi FEN lỗi thiếu hàng
+                const rowStr = rows[r] || "8"; 
                 
                 for (let i = 0; i < rowStr.length; i++) {
                     const char = rowStr[i];
@@ -283,7 +280,6 @@
             renderBoardGraphics(boardId, isClickable);
         }
 
-        // HÀM XUẤT ĐỒ HỌA BÀN CỜ ĐẸP MẮT
         function renderBoardGraphics(boardId, isClickable) {
             const boardDiv = document.getElementById(boardId);
             if (!boardDiv) return;
@@ -317,7 +313,8 @@
         }
 
         function handleSquareInteraction(square, boardId) {
-            if (boardId === 'student-board' && (currentActiveType === 'quiz' || document.getElementById('student-status').innerText.includes("Đã nộp"))) {
+            // Khóa tương tác nếu là học trò ở chế độ trắc nghiệm hoặc trạng thái đã đi quân xong
+            if (boardId === 'student-board' && (currentActiveType === 'quiz' || currentRecordedMove !== '')) {
                 return;
             }
 
@@ -343,11 +340,20 @@
                     const moveStr = `${fromSquare}-${toSquare}`;
                     
                     if (boardId === 'coach-board') {
+                        // HLV đi cờ -> Điền nước đi đúng mẫu vào input
                         document.getElementById('input-correct-move').value = moveStr;
+                        
+                        // YÊU CẦU 2: Tự động hoàn nguyên (Reset) về thế cờ gốc tức thì để giao diện luôn sạch
+                        let fen = document.getElementById('input-fen').value.trim() || defaultFEN;
+                        parseAndDrawFEN(fen, 'coach-board', true);
+                        
                     } else if (boardId === 'student-board') {
+                        // YÊU CẦU 1: Học trò đi cờ xong -> Khóa cứng bàn cờ tại chỗ ("Không cho đi lại")
                         currentRecordedMove = moveStr;
+                        renderBoardGraphics('student-board', false); // Khóa bàn cờ (isClickable = false)
+                        
                         document.getElementById('submit-btn-area').classList.remove('hidden');
-                        document.getElementById('student-status').innerHTML = `Nước đi lựa chọn: <b style="color:#e67e22; font-size:18px;">${moveStr}</b>. Click nút dưới để nộp bài!`;
+                        document.getElementById('student-status').innerHTML = `Nước đi lựa chọn: <b style="color:#e67e22; font-size:18px;">${moveStr}</b>.<br>⚠️ Đã khóa nước đi! Vui lòng ấn nút gửi bài phía dưới:`;
                     }
                 }
             }
@@ -397,8 +403,7 @@
 
         function confirmStudentMove() {
             document.getElementById('submit-btn-area').classList.add('hidden');
-            renderBoardGraphics('student-board', false); 
-            document.getElementById('student-status').innerHTML = `🚀 Đã nộp nước đi [<b>${currentRecordedMove}</b>]. Đang chờ hệ thống chấm điểm tính giờ!`;
+            document.getElementById('student-status').innerHTML = `🚀 Đã nộp nước đi [<b>${currentRecordedMove}</b>]. Đang chờ hệ thống tính điểm!`;
             socket.emit('submit_answer', currentRecordedMove);
         }
 
@@ -417,7 +422,7 @@
 
             if (myRole === 'student') {
                 if (data.type === 'quiz') {
-                    parseAndDrawFEN(data.fen, 'student-board', false); // Trắc nghiệm thì khóa bốc cờ
+                    parseAndDrawFEN(data.fen, 'student-board', false); 
                     document.getElementById('text-a').innerText = data.a;
                     document.getElementById('text-b').innerText = data.b;
                     document.getElementById('text-c').innerText = data.c;
@@ -425,12 +430,12 @@
                     
                     document.getElementById('answers-area').classList.remove('hidden');
                     document.getElementById('submit-btn-area').classList.add('hidden');
-                    document.getElementById('student-status').innerText = "Thầy ra đề TRẮC NGHIỆM! Hãy chọn đáp án:";
+                    document.getElementById('student-status').innerText = "Thầy ra đề TRẮC NGHIỆM! Xem bàn cờ và chọn nút câu trả lời:";
                 } else {
-                    parseAndDrawFEN(data.fen, 'student-board', true); // Tự luận thì mở bốc cờ
+                    parseAndDrawFEN(data.fen, 'student-board', true); // Mở bàn cờ cho bốc quân
                     document.getElementById('answers-area').classList.add('hidden');
-                    document.getElementById('submit-btn-area').classList.add('hidden');
-                    document.getElementById('student-status').innerText = "Thầy ra đề BỐC CỜ! Click quân cờ rồi chọn ô đích để đi chuyển quân:";
+                    document.getElementById('submit-btn-area').classList.add('hidden'); 
+                    document.getElementById('student-status').innerText = "Thầy ra đề BỐC CỜ! Hãy bốc một quân cờ di chuyển đến ô đích để trả lời:";
                 }
             }
 
@@ -459,7 +464,6 @@
             }, 1000);
         });
 
-        // HLV ĐÓN ĐÁP ÁN ĐỒNG THỜI HIỂN THỊ SỐ GIÂY LÀM BÀI CỦA TỪNG BÉ
         socket.on('coach_receive', (data) => {
             if (myRole === 'coach') {
                 const logs = document.getElementById('coach-logs');
@@ -471,11 +475,17 @@
             }
         });
 
+        // YÊU CẦU 3: Cập nhật thuật toán sắp xếp Bảng Vàng (Ưu tiên Điểm số, trùng điểm xếp theo Tổng thời gian ít hơn)
         socket.on('update_leaderboard', (leaderboard) => {
             const tbody = document.getElementById('leaderboard-body');
             tbody.innerHTML = '';
 
-            let sortedArr = Object.entries(leaderboard).sort((a, b) => b[1] - a[1]);
+            let sortedArr = Object.entries(leaderboard).sort((a, b) => {
+                if (b[1].points !== a[1].points) {
+                    return b[1].points - a[1].points; // Nhiều điểm hơn xếp trước
+                }
+                return a[1].totalTime - b[1].totalTime; // Trùng điểm, thời gian ít hơn xếp trước
+            });
 
             sortedArr.forEach((item, index) => {
                 let rank = index + 1;
@@ -487,7 +497,8 @@
                     <tr ${rankClass}>
                         <td>Hạng ${rank}</td>
                         <td><b>${name}</b></td>
-                        <td><span style="background:#e8f8f5; padding:4px 10px; border-radius:15px; font-weight:bold; color:#117a65;">${score} Pts</span></td>
+                        <td><span style="background:#e8f8f5; padding:4px 10px; border-radius:15px; font-weight:bold; color:#117a65;">${score.points} Pts</span></td>
+                        <td><span style="background:#fef9e7; padding:4px 10px; border-radius:15px; font-weight:bold; color:#b7950b;">${score.totalTime} Giây</span></td>
                     </tr>
                 `;
             });

@@ -19,8 +19,9 @@ io.on('connection', (socket) => {
         socket.username = data.name || 'Ẩn danh';
         socket.role = data.role; 
         
+        // Khởi tạo cấu trúc lưu trữ gồm cả Điểm số và Tổng thời gian
         if (socket.role === 'student' && !leaderboard[socket.username]) {
-            leaderboard[socket.username] = 0;
+            leaderboard[socket.username] = { points: 0, totalTime: 0 };
         }
         
         io.emit('update_leaderboard', leaderboard);
@@ -53,7 +54,7 @@ io.on('connection', (socket) => {
             d: data.d,
             correctAnswer: data.correctAnswer, 
             totalSeconds: seconds,
-            startTime: Date.now(), // Lưu mốc thời gian bắt đầu câu hỏi
+            startTime: Date.now(), 
             endTime: Date.now() + (seconds * 1000)
         };
         
@@ -78,7 +79,6 @@ io.on('connection', (socket) => {
         }
         answeredUsers.add(socket.username); 
 
-        // Tính số giây học trò đã dùng để suy nghĩ
         let timeSpent = Math.round((Date.now() - currentQuestion.startTime) / 1000);
         if (timeSpent > currentQuestion.totalSeconds) {
             timeSpent = currentQuestion.totalSeconds;
@@ -86,11 +86,14 @@ io.on('connection', (socket) => {
 
         const isCorrect = currentQuestion && selectedAnswer === currentQuestion.correctAnswer;
         
-        if (isCorrect && leaderboard[socket.username] !== undefined) {
-            leaderboard[socket.username] += 10;
+        // Tích lũy thời gian làm bài và điểm số vào hệ thống Grand Prix
+        if (leaderboard[socket.username] !== undefined) {
+            leaderboard[socket.username].totalTime += timeSpent; // Cộng dồn thời gian suy nghĩ
+            if (isCorrect) {
+                leaderboard[socket.username].points += 10; // Đúng thì cộng điểm
+            }
         }
 
-        // Báo kết quả kèm thời gian suy nghĩ về cho HLV
         io.emit('coach_receive', {
             name: socket.username,
             answer: selectedAnswer,
@@ -103,7 +106,7 @@ io.on('connection', (socket) => {
 
     socket.on('reset_scores', () => {
         for (let user in leaderboard) {
-            leaderboard[user] = 0;
+            leaderboard[user] = { points: 0, totalTime: 0 };
         }
         io.emit('update_leaderboard', leaderboard);
     });
@@ -111,5 +114,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`He thong do thoi gian dang chay tai cong: ${PORT}`);
+    console.log(`Server Grand Prix dang chay tai cong: ${PORT}`);
 });

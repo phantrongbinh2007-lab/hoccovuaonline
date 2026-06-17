@@ -25,7 +25,6 @@ io.on('connection', (socket) => {
         
         io.emit('update_leaderboard', leaderboard);
 
-        // Học trò vào sau hoặc bị văng mạng, tự động khôi phục đúng dạng đề đang chạy
         if (currentQuestion && socket.role === 'student') {
             let timeLeft = Math.round((currentQuestion.endTime - Date.now()) / 1000);
             if (timeLeft > 0 && !answeredUsers.has(socket.username)) {
@@ -46,13 +45,15 @@ io.on('connection', (socket) => {
         let seconds = parseInt(data.seconds) || 30;
         
         currentQuestion = {
-            type: data.type, // 'quiz' (Trắc nghiệm) hoặc 'move' (Bốc cờ)
+            type: data.type,
             fen: data.fen,
             a: data.a,
             b: data.b,
             c: data.c,
             d: data.d,
             correctAnswer: data.correctAnswer, 
+            totalSeconds: seconds,
+            startTime: Date.now(), // Lưu mốc thời gian bắt đầu câu hỏi
             endTime: Date.now() + (seconds * 1000)
         };
         
@@ -77,16 +78,24 @@ io.on('connection', (socket) => {
         }
         answeredUsers.add(socket.username); 
 
+        // Tính số giây học trò đã dùng để suy nghĩ
+        let timeSpent = Math.round((Date.now() - currentQuestion.startTime) / 1000);
+        if (timeSpent > currentQuestion.totalSeconds) {
+            timeSpent = currentQuestion.totalSeconds;
+        }
+
         const isCorrect = currentQuestion && selectedAnswer === currentQuestion.correctAnswer;
         
         if (isCorrect && leaderboard[socket.username] !== undefined) {
             leaderboard[socket.username] += 10;
         }
 
+        // Báo kết quả kèm thời gian suy nghĩ về cho HLV
         io.emit('coach_receive', {
             name: socket.username,
             answer: selectedAnswer,
-            isCorrect: isCorrect
+            isCorrect: isCorrect,
+            timeSpent: timeSpent
         });
 
         io.emit('update_leaderboard', leaderboard);
@@ -102,5 +111,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Hệ thống Đa chế độ đang chạy tại cổng: ${PORT}`);
+    console.log(`He thong do thoi gian dang chay tai cong: ${PORT}`);
 });

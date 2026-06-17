@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đấu Trường Cờ Vua Grand Prix - Đa Chế Độ</title>
+    <title>Đấu Trường Cờ Vua Grand Prix - Đồ Họa Cao Cấp</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
@@ -17,7 +17,7 @@
         .btn-danger { background-color: #dc3545; }
         .btn-danger:hover { background-color: #bd2130; }
         
-        /* BÀN CỜ ĐỒNG BỘ CSS GRID */
+        /* ĐỊNH DẠNG KHUNG BÀN CỜ 8X8 ĐỐI XỨNG TUYỆT ĐỐI */
         .board-box { margin: 15px auto; max-width: 400px; width: 100%; }
         .chess-board {
             display: grid;
@@ -25,11 +25,14 @@
             grid-template-rows: repeat(8, 1fr);
             width: 100%;
             aspect-ratio: 1 / 1;
-            border: 4px solid #34495e;
-            border-radius: 6px;
+            border: 5px solid #34495e;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             overflow: hidden;
         }
         .square {
+            width: 100%;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -40,30 +43,26 @@
         .square.dark { background-color: #b58863; }
         .square.selected { background-color: #74b9ff !important; } 
         
-        .piece {
-            font-size: 42px;
+        /* Định dạng quân cờ hình ảnh SVG sắc nét */
+        .piece-img {
+            width: 90%;
+            height: 90%;
+            object-fit: contain;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            height: 100%;
             transition: transform 0.1s;
+            z-index: 2;
         }
-        .piece:hover { transform: scale(1.08); }
-        .piece.white-piece { color: #ffffff; filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.8)) drop-shadow(0px 0px 1px #000); }
-        .piece.black-piece { color: #222222; filter: drop-shadow(0px 1px 1px rgba(255,255,255,0.6)); }
+        .piece-img:hover { transform: scale(1.08); }
         
-        /* Cấu trúc phần trắc nghiệm */
         .answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-        .btn-ans { background-color: #2ecc71; color: white; padding: 15px; font-size: 16px; border-radius: 8px; text-align: left; }
+        .btn-ans { background-color: #2ecc71; color: white; padding: 15px; font-size: 16px; border-radius: 8px; text-align: left; font-weight: bold; }
         .btn-ans:hover { background-color: #27ae60; }
         
         #timer, #timer-coach { font-size: 28px; font-weight: bold; color: #e74c3c; margin: 10px 0; text-align: center; }
         .status-text { font-size: 16px; font-weight: bold; color: #16a085; margin: 10px 0; text-align: center; }
         
         .coach-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; }
-        .log-box { background: #f8f9fa; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; height: 180px; overflow-y: auto; }
+        .log-box { background: #f8f9fa; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; height: 200px; overflow-y: auto; }
         
         .leaderboard-section { margin-top: 30px; border-top: 2px dashed #cbd5e1; padding-top: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -74,7 +73,6 @@
 
         @media (max-width: 768px) {
             .coach-layout { grid-template-columns: 1fr; }
-            .piece { font-size: 34px; }
         }
     </style>
 </head>
@@ -102,7 +100,7 @@
                 <button class="btn btn-ans" onclick="submitQuizAnswer('A')">A: <span id="text-a"></span></button>
                 <button class="btn btn-ans" onclick="submitQuizAnswer('B')">B: <span id="text-b"></span></button>
                 <button class="btn btn-ans" onclick="submitQuizAnswer('C')">C: <span id="text-c"></span></button>
-                <button class="btn btn-ans" onclick="submitQuizAnswer('D')">D: <span id="text-d"></span></button>
+                <button class="btn btn-ans" onclick="submitAnswer('D')">D: <span id="text-d"></span></button>
             </div>
 
             <div id="submit-btn-area" class="hidden" style="text-align:center; margin: 15px 0;">
@@ -140,8 +138,8 @@
                     </div>
 
                     <div id="area-move-inputs" class="hidden">
-                        <label>Nước đi đúng (Bốc cờ trên bàn cờ bên phải để tự điền):</label>
-                        <input type="text" id="input-correct-move" placeholder="Ví dụ: e2-e4" style="font-weight:bold; color:#d35400; background:#fffdf0;">
+                        <label>Nước đi đúng (Bốc cờ trực tiếp trên bàn cờ bên phải để tự điền):</label>
+                        <input type="text" id="input-correct-move" placeholder="Ví dụ: e2-e4" style="font-weight:bold; color:#d35400; background:#fffdf0;" readonly>
                     </div>
                     
                     <label>Thời gian suy nghĩ (giây):</label>
@@ -156,7 +154,7 @@
                         <div id="coach-board" class="chess-board"></div>
                     </div>
                     <div id="timer-coach">Còn lại: --s</div>
-                    <h3>Nhật ký học trò nộp đáp án:</h3>
+                    <h3>Nhật ký học trò nộp đáp án (Kèm đồng hồ tính giây):</h3>
                     <div id="coach-logs" class="log-box"></div>
                 </div>
             </div>
@@ -188,11 +186,22 @@
         let localBoardState = {}; 
         let selectedSquare = null;
         let currentRecordedMove = '';
-        let currentActiveType = 'quiz'; // Theo dõi loại câu hỏi đang chạy
+        let currentActiveType = 'quiz'; 
 
-        const pieceSymbols = {
-            'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
-            'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
+        // ĐƯỜNG DẪN BỘ ĐỒ HỌA VECTOR SVG CHUẨN QUỐC TẾ SIÊU ĐẸP
+        const pieceImages = {
+            'P': 'https://upload.wikimedia.org/wikipedia/commons/4/45/Chess_plt45.svg',
+            'R': 'https://upload.wikimedia.org/wikipedia/commons/7/72/Chess_rlt45.svg',
+            'N': 'https://upload.wikimedia.org/wikipedia/commons/7/70/Chess_nlt45.svg',
+            'B': 'https://upload.wikimedia.org/wikipedia/commons/b/b1/Chess_blt45.svg',
+            'Q': 'https://upload.wikimedia.org/wikipedia/commons/1/15/Chess_qlt45.svg',
+            'K': 'https://upload.wikimedia.org/wikipedia/commons/4/42/Chess_klt45.svg',
+            'p': 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Chess_pdt45.svg',
+            'r': 'https://upload.wikimedia.org/wikipedia/commons/f/ff/Chess_rdt45.svg',
+            'n': 'https://upload.wikimedia.org/wikipedia/commons/e/ef/Chess_ndt45.svg',
+            'b': 'https://upload.wikimedia.org/wikipedia/commons/9/98/Chess_bdt45.svg',
+            'q': 'https://upload.wikimedia.org/wikipedia/commons/4/47/Chess_qdt45.svg',
+            'k': 'https://upload.wikimedia.org/wikipedia/commons/f/f0/Chess_kdt45.svg'
         };
 
         function joinRoom(role) {
@@ -230,11 +239,10 @@
             } else {
                 document.getElementById('coach-screen').classList.remove('hidden');
                 parseAndDrawFEN(defaultFEN, 'coach-board', true); 
-                document.getElementById('coach-logs').innerHTML += `<p style="color:#2980b9; font-weight:bold;">Chào mừng ${myName} đã vào phòng!</p>`;
+                document.getElementById('coach-logs').innerHTML += `<p style="color:#007bff; font-weight:bold;">Chào mừng ${myName} đã vào điều khiển phòng!</p>`;
             }
         }
 
-        // ẨN HIỆN FORM INPUT THEO CHẾ ĐỘ CỦA HLV
         function toggleCoachInputs() {
             const type = document.getElementById('input-type').value;
             if (type === 'quiz') {
@@ -246,6 +254,7 @@
             }
         }
 
+        // HÀM GIẢI MÃ CHUỖI FEN AN TOÀN CHUẨN 8 HÀNG
         function parseAndDrawFEN(fen, boardId, isClickable) {
             localBoardState = {};
             const parts = fen.split(' ');
@@ -255,18 +264,17 @@
             for (let r = 0; r < 8; r++) {
                 const rank = 8 - r;
                 let fileIdx = 0;
-                const rowStr = rows[r];
+                const rowStr = rows[r] || "8"; // Bảo vệ nếu chuỗi FEN lỗi thiếu hàng
                 
                 for (let i = 0; i < rowStr.length; i++) {
                     const char = rowStr[i];
                     if (isNaN(char)) {
-                        const file = files[fileIdx];
-                        const square = file + rank;
-                        localBoardState[square] = {
-                            type: char.toLowerCase(),
-                            color: char === char.toUpperCase() ? 'w' : 'b'
-                        };
-                        fileIdx++;
+                        if (fileIdx < 8) {
+                            const file = files[fileIdx];
+                            const square = file + rank;
+                            localBoardState[square] = char;
+                            fileIdx++;
+                        }
                     } else {
                         fileIdx += parseInt(char);
                     }
@@ -275,8 +283,10 @@
             renderBoardGraphics(boardId, isClickable);
         }
 
+        // HÀM XUẤT ĐỒ HỌA BÀN CỜ ĐẸP MẮT
         function renderBoardGraphics(boardId, isClickable) {
             const boardDiv = document.getElementById(boardId);
+            if (!boardDiv) return;
             boardDiv.innerHTML = '';
             const files = ['a','b','c','d','e','f','g','h'];
             
@@ -290,12 +300,12 @@
                     squareDiv.className = 'square ' + ((r + f) % 2 === 0 ? 'light' : 'dark');
                     squareDiv.dataset.square = square;
                     
-                    if (localBoardState[square]) {
-                        const p = localBoardState[square];
-                        const pieceDiv = document.createElement('div');
-                        pieceDiv.className = 'piece ' + (p.color === 'w' ? 'white-piece' : 'black-piece');
-                        pieceDiv.innerText = pieceSymbols[p.color === 'w' ? p.type.toUpperCase() : p.type];
-                        squareDiv.appendChild(pieceDiv);
+                    const pieceChar = localBoardState[square];
+                    if (pieceChar && pieceImages[pieceChar]) {
+                        const img = document.createElement('img');
+                        img.src = pieceImages[pieceChar];
+                        img.className = 'piece-img';
+                        squareDiv.appendChild(img);
                     }
                     
                     if (isClickable) {
@@ -307,7 +317,6 @@
         }
 
         function handleSquareInteraction(square, boardId) {
-            // Đóng băng click nếu là học trò ở chế độ trắc nghiệm hoặc đã nộp bài
             if (boardId === 'student-board' && (currentActiveType === 'quiz' || document.getElementById('student-status').innerText.includes("Đã nộp"))) {
                 return;
             }
@@ -338,7 +347,7 @@
                     } else if (boardId === 'student-board') {
                         currentRecordedMove = moveStr;
                         document.getElementById('submit-btn-area').classList.remove('hidden');
-                        document.getElementById('student-status').innerHTML = `Nước đi đã chọn: <b style="color:#e67e22; font-size:18px;">${moveStr}</b>. Nhấn nút để gửi bài!`;
+                        document.getElementById('student-status').innerHTML = `Nước đi lựa chọn: <b style="color:#e67e22; font-size:18px;">${moveStr}</b>. Click nút dưới để nộp bài!`;
                     }
                 }
             }
@@ -350,7 +359,6 @@
             document.getElementById('input-correct-move').value = ''; 
         });
 
-        // HLV PHÁT ĐỀ
         function sendQuestion() {
             const type = document.getElementById('input-type').value;
             let fen = document.getElementById('input-fen').value.trim() || defaultFEN;
@@ -361,7 +369,7 @@
             } else {
                 correctAnswer = document.getElementById('input-correct-move').value.trim();
                 if (!correctAnswer) {
-                    alert("Vui lòng bốc cờ trên bàn cờ bên phải để khai báo đáp án đúng trước!");
+                    alert("Hãy thử bốc cờ di chuyển quân trên bàn cờ bên phải trước để làm đáp án mẫu!");
                     return;
                 }
             }
@@ -381,18 +389,16 @@
             document.getElementById('coach-logs').innerHTML = ''; 
         }
 
-        // HỌC TRÒ NỘP BÀI TRẮC NGHIỆM
         function submitQuizAnswer(option) {
             document.getElementById('answers-area').classList.add('hidden');
             document.getElementById('student-status').innerHTML = `🚀 Đã nộp đáp án: <span style="color:#2980b9; font-weight:bold;">Câu ${option}</span>. Chờ thầy chữa bài!`;
             socket.emit('submit_answer', option);
         }
 
-        // HỌC TRÒ NỘP BÀI BỐC CỜ
         function confirmStudentMove() {
             document.getElementById('submit-btn-area').classList.add('hidden');
-            renderBoardGraphics('student-board', false); // Khóa bàn cờ lại
-            document.getElementById('student-status').innerHTML = `🚀 Đã nộp thế cờ di chuyển [<b>${currentRecordedMove}</b>]. Chờ thầy tính điểm!`;
+            renderBoardGraphics('student-board', false); 
+            document.getElementById('student-status').innerHTML = `🚀 Đã nộp nước đi [<b>${currentRecordedMove}</b>]. Đang chờ hệ thống chấm điểm tính giờ!`;
             socket.emit('submit_answer', currentRecordedMove);
         }
 
@@ -402,18 +408,16 @@
             }
         }
 
-        // LẮNG NGHE ĐỒNG BỘ ĐỀ MỚI TỪ SERVER TRUYỀN XUỐNG
         socket.on('new_question', (data) => {
             clearInterval(countdownInterval);
             let timeLeft = data.seconds;
             selectedSquare = null;
             currentRecordedMove = '';
-            currentActiveType = data.type; // Cập nhật chế độ câu hỏi hiện hành
+            currentActiveType = data.type; 
 
             if (myRole === 'student') {
                 if (data.type === 'quiz') {
-                    // Chế độ trắc nghiệm: Khóa tương tác bốc cờ, hiện bộ nút chữ
-                    parseAndDrawFEN(data.fen, 'student-board', false);
+                    parseAndDrawFEN(data.fen, 'student-board', false); // Trắc nghiệm thì khóa bốc cờ
                     document.getElementById('text-a').innerText = data.a;
                     document.getElementById('text-b').innerText = data.b;
                     document.getElementById('text-c').innerText = data.c;
@@ -421,13 +425,12 @@
                     
                     document.getElementById('answers-area').classList.remove('hidden');
                     document.getElementById('submit-btn-area').classList.add('hidden');
-                    document.getElementById('student-status').innerText = "Thầy ra đề TRẮC NGHIỆM! Xem bàn cờ và chọn nút câu trả lời:";
+                    document.getElementById('student-status').innerText = "Thầy ra đề TRẮC NGHIỆM! Hãy chọn đáp án:";
                 } else {
-                    // Chế độ bốc cờ: Mở tương tác di chuyển quân, ẩn bộ nút chữ
-                    parseAndDrawFEN(data.fen, 'student-board', true);
+                    parseAndDrawFEN(data.fen, 'student-board', true); // Tự luận thì mở bốc cờ
                     document.getElementById('answers-area').classList.add('hidden');
                     document.getElementById('submit-btn-area').classList.add('hidden');
-                    document.getElementById('student-status').innerText = "Thầy ra đề BỐC CỜ! Hãy bấm giữ di chuyển quân cờ để phối hợp:";
+                    document.getElementById('student-status').innerText = "Thầy ra đề BỐC CỜ! Click quân cờ rồi chọn ô đích để đi chuyển quân:";
                 }
             }
 
@@ -456,13 +459,14 @@
             }, 1000);
         });
 
+        // HLV ĐÓN ĐÁP ÁN ĐỒNG THỜI HIỂN THỊ SỐ GIÂY LÀM BÀI CỦA TỪNG BÉ
         socket.on('coach_receive', (data) => {
             if (myRole === 'coach') {
                 const logs = document.getElementById('coach-logs');
                 const textStyle = data.isCorrect ? "color:#27ae60; font-weight:bold;" : "color:#c0392b;";
                 const statusSymbol = data.isCorrect ? "✅ ĐÚNG" : "❌ SAI";
                 
-                logs.innerHTML += `<p>• Học trò <b>${data.name}</b> trả lời: [${data.answer}] -> <span style="${textStyle}">${statusSymbol}</span></p>`;
+                logs.innerHTML += `<p style="margin:6px 0;">• Học trò <b>${data.name}</b> trả lời: [${data.answer}] -> <span style="${textStyle}">${statusSymbol}</span> <span style="color:#7f8c8d; font-size:13px;">(sau ${data.timeSpent} giây)</span></p>`;
                 logs.scrollTop = logs.scrollHeight; 
             }
         });

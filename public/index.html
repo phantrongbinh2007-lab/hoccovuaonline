@@ -48,7 +48,7 @@
         <div id="login-screen">
             <h2>Chào mừng thầy và học trò đến với lớp học Cờ Vua</h2>
             <p>Nhập tên hiển thị của bạn để tham gia vào hệ thống giải đấu Grand Prix:</p>
-            <input type="text" id="username" placeholder="Ví dụ: Gia Bảo, Tuấn Kiệt, HLV...">
+            <input type="text" id="username" placeholder="Ví dụ: Gia Bảo, Tuấn Kiệt... (HLV không cần nhập)">
             <br><br>
             <button class="btn" onclick="joinRoom('student')">Vào Lớp (Học Trò)</button>
             <button class="btn" onclick="joinRoom('coach')" style="background-color: #6c757d;">Tôi là HLV</button>
@@ -135,24 +135,38 @@
         const defaultFEN = "r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4";
 
         function joinRoom(role) {
-            const nameInput = document.getElementById('username').value.trim();
-            if(!nameInput) {
-                alert("Vui lòng điền tên của bạn trước khi tiếp tục!");
+            let nameInput = document.getElementById('username').value.trim();
+
+            if (role === 'student' && !nameInput) {
+                alert("Học trò vui lòng điền tên trước khi vào lớp!");
                 return;
             }
 
             if (role === 'coach') {
                 const pass = prompt("Vui lòng nhập mật khẩu Huấn Luyện Viên:");
-                if (pass !== "thaybinh") {
-                    alert("Sai mật khẩu! Bạn không thể vào phòng của Thầy.");
+                
+                // === KHU VỰC THÊM MẬT KHẨU CHO THẦY CÔ ===
+                // Bro cứ thêm dòng mới theo mẫu: "mật khẩu": "Tên Thầy Cô"
+                const coachPasswords = {
+                    "thaybinh": "Thầy Bình",
+                    "codung": "Cô Dung",
+                    "thayhiep": "Thầy Hiệp",
+                    "cothao": "Cô Thảo"
+                                    };
+
+                if (!coachPasswords[pass]) {
+                    alert("Sai mật khẩu! Từ chối truy cập.");
                     return; 
                 }
+                
+                // Lấy luôn tên thầy cô dựa vào mật khẩu vừa nhập
+                myName = coachPasswords[pass];
+            } else {
+                myName = nameInput;
             }
 
-            myName = nameInput;
             myRole = role;
 
-            // Truyền cả tên và chức vụ lên Server
             socket.emit('join', { name: myName, role: myRole });
 
             document.getElementById('login-screen').classList.add('hidden');
@@ -162,6 +176,8 @@
                 document.getElementById('student-screen').classList.remove('hidden');
             } else {
                 document.getElementById('coach-screen').classList.remove('hidden');
+                // HLV thấy lời chào để biết đăng nhập đúng tài khoản
+                document.getElementById('coach-logs').innerHTML += `<p style="color:#2980b9; font-weight:bold;">Chào mừng ${myName} đã vào điều khiển phòng!</p>`;
             }
         }
 
@@ -190,7 +206,6 @@
         }
 
         function submitAnswer(option) {
-            // VẤN ĐỀ 2 (Khóa phía Giao diện): Bấm xong là ẩn ngay lập tức, khỏi bấm nháy
             document.getElementById('answers-area').classList.add('hidden');
             document.getElementById('student-status').innerHTML = `Đã ghi nhận đáp án: <span style="color:#2980b9;">Câu ${option}</span>. Chờ thầy chữa bài!`;
             

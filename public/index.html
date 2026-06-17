@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đấu Trường Cờ Vua Grand Prix</title>
+    <title>Đấu Trường Cờ Vua Grand Prix - Đa Chế Độ</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        .container { max-width: 950px; margin: 0 auto; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
         h1, h2, h3 { color: #2c3e50; margin-top: 0; }
         .hidden { display: none !important; }
         
@@ -17,15 +17,50 @@
         .btn-danger { background-color: #dc3545; }
         .btn-danger:hover { background-color: #bd2130; }
         
-        .board-box { margin: 15px auto; max-width: 400px; text-align: center; }
-        img.board { width: 100%; border: 4px solid #34495e; border-radius: 8px; background-color: #ddd; }
+        /* BÀN CỜ ĐỒNG BỘ CSS GRID */
+        .board-box { margin: 15px auto; max-width: 400px; width: 100%; }
+        .chess-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            border: 4px solid #34495e;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .square {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            user-select: none;
+        }
+        .square.light { background-color: #f0d9b5; }
+        .square.dark { background-color: #b58863; }
+        .square.selected { background-color: #74b9ff !important; } 
         
-        #timer, #timer-coach { font-size: 28px; font-weight: bold; color: #e74c3c; margin: 10px 0; }
-        .status-text { font-size: 16px; font-weight: bold; color: #16a085; margin: 10px 0; }
+        .piece {
+            font-size: 42px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.1s;
+        }
+        .piece:hover { transform: scale(1.08); }
+        .piece.white-piece { color: #ffffff; filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.8)) drop-shadow(0px 0px 1px #000); }
+        .piece.black-piece { color: #222222; filter: drop-shadow(0px 1px 1px rgba(255,255,255,0.6)); }
         
+        /* Cấu trúc phần trắc nghiệm */
         .answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-        .btn-ans { background-color: #2ecc71; color: white; padding: 15px; font-size: 16px; border-radius: 8px; }
+        .btn-ans { background-color: #2ecc71; color: white; padding: 15px; font-size: 16px; border-radius: 8px; text-align: left; }
         .btn-ans:hover { background-color: #27ae60; }
+        
+        #timer, #timer-coach { font-size: 28px; font-weight: bold; color: #e74c3c; margin: 10px 0; text-align: center; }
+        .status-text { font-size: 16px; font-weight: bold; color: #16a085; margin: 10px 0; text-align: center; }
         
         .coach-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; }
         .log-box { background: #f8f9fa; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; height: 180px; overflow-y: auto; }
@@ -39,6 +74,7 @@
 
         @media (max-width: 768px) {
             .coach-layout { grid-template-columns: 1fr; }
+            .piece { font-size: 34px; }
         }
     </style>
 </head>
@@ -57,16 +93,20 @@
         <div id="student-screen" class="hidden">
             <h2>Giải Thế Cờ Học Phần</h2>
             <div class="board-box">
-                <img id="student-board" class="board" src="https://lichess1.org/export/fen.gif?fen=r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R%20w%20KQkq%20-%200%204" alt="Đang đợi thế cờ từ thầy...">
+                <div id="student-board" class="chess-board"></div>
             </div>
             <div id="timer">00:00</div>
             <p id="student-status" class="status-text">Đang chờ thầy thiết lập đề bài...</p>
             
             <div id="answers-area" class="answers-grid hidden">
-                <button class="btn btn-ans" onclick="submitAnswer('A')">A: <span id="text-a"></span></button>
-                <button class="btn btn-ans" onclick="submitAnswer('B')">B: <span id="text-b"></span></button>
-                <button class="btn btn-ans" onclick="submitAnswer('C')">C: <span id="text-c"></span></button>
-                <button class="btn btn-ans" onclick="submitAnswer('D')">D: <span id="text-d"></span></button>
+                <button class="btn btn-ans" onclick="submitQuizAnswer('A')">A: <span id="text-a"></span></button>
+                <button class="btn btn-ans" onclick="submitQuizAnswer('B')">B: <span id="text-b"></span></button>
+                <button class="btn btn-ans" onclick="submitQuizAnswer('C')">C: <span id="text-c"></span></button>
+                <button class="btn btn-ans" onclick="submitQuizAnswer('D')">D: <span id="text-d"></span></button>
+            </div>
+
+            <div id="submit-btn-area" class="hidden" style="text-align:center; margin: 15px 0;">
+                <button class="btn" onclick="confirmStudentMove()" style="background-color:#2ecc71; width:80%; font-size:18px;">Nộp Nước Đi Này 🚀</button>
             </div>
         </div>
 
@@ -75,32 +115,45 @@
             <div class="coach-layout">
                 <div>
                     <h3>Thiết kế câu hỏi mới</h3>
+                    
+                    <label><b>Chọn Chế Độ Trả Lời:</b></label>
+                    <select id="input-type" onchange="toggleCoachInputs()">
+                        <option value="quiz">Chế độ 1: Trắc nghiệm (A, B, C, D)</option>
+                        <option value="move">Chế độ 2: Bốc cờ (Di chuyển quân)</option>
+                    </select>
+
                     <label>Chuỗi FEN thế cờ (Để trống dùng mặc định):</label>
                     <input type="text" id="input-fen" placeholder="r1bqk1nr/pppp1ppp/... w KQkq -">
                     
-                    <label>Đáp án câu A:</label> <input type="text" id="input-a" value="Ng5">
-                    <label>Đáp án câu B:</label> <input type="text" id="input-b" value="d3">
-                    <label>Đáp án câu C:</label> <input type="text" id="input-c" value="c3">
-                    <label>Đáp án câu D:</label> <input type="text" id="input-d" value="O-O">
-                    
-                    <label>Đáp án đúng chính xác:</label>
-                    <select id="input-correct">
-                        <option value="A">Câu A</option>
-                        <option value="B">Câu B</option>
-                        <option value="C">Câu C</option>
-                        <option value="D">Câu D</option>
-                    </select>
+                    <div id="area-quiz-inputs">
+                        <label>Đáp án câu A:</label> <input type="text" id="input-a" value="Ng5">
+                        <label>Đáp án câu B:</label> <input type="text" id="input-b" value="d3">
+                        <label>Đáp án câu C:</label> <input type="text" id="input-c" value="c3">
+                        <label>Đáp án câu D:</label> <input type="text" id="input-d" value="O-O">
+                        <label>Đáp án đúng trắc nghiệm:</label>
+                        <select id="input-correct-quiz">
+                            <option value="A">Câu A</option>
+                            <option value="B">Câu B</option>
+                            <option value="C">Câu C</option>
+                            <option value="D">Câu D</option>
+                        </select>
+                    </div>
+
+                    <div id="area-move-inputs" class="hidden">
+                        <label>Nước đi đúng (Bốc cờ trên bàn cờ bên phải để tự điền):</label>
+                        <input type="text" id="input-correct-move" placeholder="Ví dụ: e2-e4" style="font-weight:bold; color:#d35400; background:#fffdf0;">
+                    </div>
                     
                     <label>Thời gian suy nghĩ (giây):</label>
                     <input type="number" id="input-seconds" value="30">
                     
-                    <button class="btn" onclick="sendQuestion()" style="width:100%; background-color:#e67e22;">Phát Đề Bài Đến Cả Lớp</button>
+                    <button class="btn" onclick="sendQuestion()" style="width:100%; background-color:#e67e22; margin-top:10px;">Phát Đề Bài Đến Cả Lớp</button>
                     <button class="btn btn-danger" onclick="resetLeaderboard()" style="width:100%; margin-top:10px;">Reset Điểm Toàn Bộ Lớp</button>
                 </div>
                 
                 <div>
                     <div class="board-box" style="margin-top:0;">
-                        <img id="coach-board" class="board" src="https://lichess1.org/export/fen.gif?fen=r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R%20w%20KQkq%20-%200%204" alt="Bàn cờ HLV">
+                        <div id="coach-board" class="chess-board"></div>
                     </div>
                     <div id="timer-coach">Còn lại: --s</div>
                     <h3>Nhật ký học trò nộp đáp án:</h3>
@@ -111,7 +164,6 @@
 
         <div id="leaderboard-area" class="leaderboard-section hidden">
             <h3>🏆 BẢNG VÀNG TÍCH LŨY GRAND PRIX 🏆</h3>
-            <p style="font-size: 13px; color: #7f8c8d;">(Trả lời đúng hệ thống tự động cộng +10 điểm vinh danh)</p>
             <table>
                 <thead>
                     <tr>
@@ -120,8 +172,7 @@
                         <th>Điểm Tích Lũy</th>
                     </tr>
                 </thead>
-                <tbody id="leaderboard-body">
-                </tbody>
+                <tbody id="leaderboard-body"></tbody>
             </table>
         </div>
     </div>
@@ -132,41 +183,42 @@
         let myRole = '';
         let myName = '';
         let countdownInterval;
+        
         const defaultFEN = "r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4";
+        let localBoardState = {}; 
+        let selectedSquare = null;
+        let currentRecordedMove = '';
+        let currentActiveType = 'quiz'; // Theo dõi loại câu hỏi đang chạy
+
+        const pieceSymbols = {
+            'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
+            'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
+        };
 
         function joinRoom(role) {
             let nameInput = document.getElementById('username').value.trim();
-
             if (role === 'student' && !nameInput) {
                 alert("Học trò vui lòng điền tên trước khi vào lớp!");
                 return;
             }
-
             if (role === 'coach') {
                 const pass = prompt("Vui lòng nhập mật khẩu Huấn Luyện Viên:");
-                
-                // === KHU VỰC THÊM MẬT KHẨU CHO THẦY CÔ ===
-                // Bro cứ thêm dòng mới theo mẫu: "mật khẩu": "Tên Thầy Cô"
                 const coachPasswords = {
                     "thaybinh": "Thầy Bình",
                     "codung": "Cô Dung",
                     "thayhiep": "Thầy Hiệp",
                     "cothao": "Cô Thảo"
-                                    };
-
+                };
                 if (!coachPasswords[pass]) {
                     alert("Sai mật khẩu! Từ chối truy cập.");
                     return; 
                 }
-                
-                // Lấy luôn tên thầy cô dựa vào mật khẩu vừa nhập
                 myName = coachPasswords[pass];
             } else {
                 myName = nameInput;
             }
 
             myRole = role;
-
             socket.emit('join', { name: myName, role: myRole });
 
             document.getElementById('login-screen').classList.add('hidden');
@@ -174,30 +226,154 @@
 
             if (role === 'student') {
                 document.getElementById('student-screen').classList.remove('hidden');
+                parseAndDrawFEN(defaultFEN, 'student-board', false); 
             } else {
                 document.getElementById('coach-screen').classList.remove('hidden');
-                // HLV thấy lời chào để biết đăng nhập đúng tài khoản
-                document.getElementById('coach-logs').innerHTML += `<p style="color:#2980b9; font-weight:bold;">Chào mừng ${myName} đã vào điều khiển phòng!</p>`;
+                parseAndDrawFEN(defaultFEN, 'coach-board', true); 
+                document.getElementById('coach-logs').innerHTML += `<p style="color:#2980b9; font-weight:bold;">Chào mừng ${myName} đã vào phòng!</p>`;
+            }
+        }
+
+        // ẨN HIỆN FORM INPUT THEO CHẾ ĐỘ CỦA HLV
+        function toggleCoachInputs() {
+            const type = document.getElementById('input-type').value;
+            if (type === 'quiz') {
+                document.getElementById('area-quiz-inputs').classList.remove('hidden');
+                document.getElementById('area-move-inputs').classList.add('hidden');
+            } else {
+                document.getElementById('area-quiz-inputs').classList.add('hidden');
+                document.getElementById('area-move-inputs').classList.remove('hidden');
+            }
+        }
+
+        function parseAndDrawFEN(fen, boardId, isClickable) {
+            localBoardState = {};
+            const parts = fen.split(' ');
+            const rows = parts[0].split('/');
+            const files = ['a','b','c','d','e','f','g','h'];
+            
+            for (let r = 0; r < 8; r++) {
+                const rank = 8 - r;
+                let fileIdx = 0;
+                const rowStr = rows[r];
+                
+                for (let i = 0; i < rowStr.length; i++) {
+                    const char = rowStr[i];
+                    if (isNaN(char)) {
+                        const file = files[fileIdx];
+                        const square = file + rank;
+                        localBoardState[square] = {
+                            type: char.toLowerCase(),
+                            color: char === char.toUpperCase() ? 'w' : 'b'
+                        };
+                        fileIdx++;
+                    } else {
+                        fileIdx += parseInt(char);
+                    }
+                }
+            }
+            renderBoardGraphics(boardId, isClickable);
+        }
+
+        function renderBoardGraphics(boardId, isClickable) {
+            const boardDiv = document.getElementById(boardId);
+            boardDiv.innerHTML = '';
+            const files = ['a','b','c','d','e','f','g','h'];
+            
+            for (let r = 0; r < 8; r++) {
+                const rank = 8 - r;
+                for (let f = 0; f < 8; f++) {
+                    const file = files[f];
+                    const square = file + rank;
+                    
+                    const squareDiv = document.createElement('div');
+                    squareDiv.className = 'square ' + ((r + f) % 2 === 0 ? 'light' : 'dark');
+                    squareDiv.dataset.square = square;
+                    
+                    if (localBoardState[square]) {
+                        const p = localBoardState[square];
+                        const pieceDiv = document.createElement('div');
+                        pieceDiv.className = 'piece ' + (p.color === 'w' ? 'white-piece' : 'black-piece');
+                        pieceDiv.innerText = pieceSymbols[p.color === 'w' ? p.type.toUpperCase() : p.type];
+                        squareDiv.appendChild(pieceDiv);
+                    }
+                    
+                    if (isClickable) {
+                        squareDiv.onclick = () => handleSquareInteraction(square, boardId);
+                    }
+                    boardDiv.appendChild(squareDiv);
+                }
+            }
+        }
+
+        function handleSquareInteraction(square, boardId) {
+            // Đóng băng click nếu là học trò ở chế độ trắc nghiệm hoặc đã nộp bài
+            if (boardId === 'student-board' && (currentActiveType === 'quiz' || document.getElementById('student-status').innerText.includes("Đã nộp"))) {
+                return;
+            }
+
+            if (!selectedSquare) {
+                if (localBoardState[square]) {
+                    selectedSquare = square;
+                    document.querySelector(`#${boardId} [data-square="${square}"]`).classList.add('selected');
+                }
+            } else {
+                const fromSquare = selectedSquare;
+                const toSquare = square;
+                
+                document.querySelector(`#${boardId} [data-square="${fromSquare}"]`).classList.remove('selected');
+                selectedSquare = null;
+                
+                if (fromSquare === toSquare) return;
+
+                if (localBoardState[fromSquare]) {
+                    localBoardState[toSquare] = localBoardState[fromSquare];
+                    delete localBoardState[fromSquare];
+                    
+                    renderBoardGraphics(boardId, true);
+                    const moveStr = `${fromSquare}-${toSquare}`;
+                    
+                    if (boardId === 'coach-board') {
+                        document.getElementById('input-correct-move').value = moveStr;
+                    } else if (boardId === 'student-board') {
+                        currentRecordedMove = moveStr;
+                        document.getElementById('submit-btn-area').classList.remove('hidden');
+                        document.getElementById('student-status').innerHTML = `Nước đi đã chọn: <b style="color:#e67e22; font-size:18px;">${moveStr}</b>. Nhấn nút để gửi bài!`;
+                    }
+                }
             }
         }
 
         document.getElementById('input-fen').addEventListener('input', function(e) {
             let fen = e.target.value.trim() || defaultFEN;
-            let encodedFen = encodeURIComponent(fen);
-            document.getElementById('coach-board').src = `https://lichess1.org/export/fen.gif?fen=${encodedFen}`;
+            parseAndDrawFEN(fen, 'coach-board', true);
+            document.getElementById('input-correct-move').value = ''; 
         });
 
+        // HLV PHÁT ĐỀ
         function sendQuestion() {
+            const type = document.getElementById('input-type').value;
             let fen = document.getElementById('input-fen').value.trim() || defaultFEN;
-            let encodedFen = encodeURIComponent(fen);
+            let correctAnswer = '';
+
+            if (type === 'quiz') {
+                correctAnswer = document.getElementById('input-correct-quiz').value;
+            } else {
+                correctAnswer = document.getElementById('input-correct-move').value.trim();
+                if (!correctAnswer) {
+                    alert("Vui lòng bốc cờ trên bàn cờ bên phải để khai báo đáp án đúng trước!");
+                    return;
+                }
+            }
 
             const data = {
-                fen: encodedFen,
+                type: type,
+                fen: fen,
                 a: document.getElementById('input-a').value,
                 b: document.getElementById('input-b').value,
                 c: document.getElementById('input-c').value,
                 d: document.getElementById('input-d').value,
-                correctAnswer: document.getElementById('input-correct').value,
+                correctAnswer: correctAnswer,
                 seconds: document.getElementById('input-seconds').value
             };
 
@@ -205,11 +381,19 @@
             document.getElementById('coach-logs').innerHTML = ''; 
         }
 
-        function submitAnswer(option) {
+        // HỌC TRÒ NỘP BÀI TRẮC NGHIỆM
+        function submitQuizAnswer(option) {
             document.getElementById('answers-area').classList.add('hidden');
-            document.getElementById('student-status').innerHTML = `Đã ghi nhận đáp án: <span style="color:#2980b9;">Câu ${option}</span>. Chờ thầy chữa bài!`;
-            
+            document.getElementById('student-status').innerHTML = `🚀 Đã nộp đáp án: <span style="color:#2980b9; font-weight:bold;">Câu ${option}</span>. Chờ thầy chữa bài!`;
             socket.emit('submit_answer', option);
+        }
+
+        // HỌC TRÒ NỘP BÀI BỐC CỜ
+        function confirmStudentMove() {
+            document.getElementById('submit-btn-area').classList.add('hidden');
+            renderBoardGraphics('student-board', false); // Khóa bàn cờ lại
+            document.getElementById('student-status').innerHTML = `🚀 Đã nộp thế cờ di chuyển [<b>${currentRecordedMove}</b>]. Chờ thầy tính điểm!`;
+            socket.emit('submit_answer', currentRecordedMove);
         }
 
         function resetLeaderboard() {
@@ -218,21 +402,33 @@
             }
         }
 
+        // LẮNG NGHE ĐỒNG BỘ ĐỀ MỚI TỪ SERVER TRUYỀN XUỐNG
         socket.on('new_question', (data) => {
             clearInterval(countdownInterval);
             let timeLeft = data.seconds;
+            selectedSquare = null;
+            currentRecordedMove = '';
+            currentActiveType = data.type; // Cập nhật chế độ câu hỏi hiện hành
 
-            const boardUrl = `https://lichess1.org/export/fen.gif?fen=${data.fen}`;
-            
             if (myRole === 'student') {
-                document.getElementById('student-board').src = boardUrl;
-                document.getElementById('text-a').innerText = data.a;
-                document.getElementById('text-b').innerText = data.b;
-                document.getElementById('text-c').innerText = data.c;
-                document.getElementById('text-d').innerText = data.d;
-                
-                document.getElementById('answers-area').classList.remove('hidden');
-                document.getElementById('student-status').innerText = "Suy nghĩ kỹ và bấm chọn:";
+                if (data.type === 'quiz') {
+                    // Chế độ trắc nghiệm: Khóa tương tác bốc cờ, hiện bộ nút chữ
+                    parseAndDrawFEN(data.fen, 'student-board', false);
+                    document.getElementById('text-a').innerText = data.a;
+                    document.getElementById('text-b').innerText = data.b;
+                    document.getElementById('text-c').innerText = data.c;
+                    document.getElementById('text-d').innerText = data.d;
+                    
+                    document.getElementById('answers-area').classList.remove('hidden');
+                    document.getElementById('submit-btn-area').classList.add('hidden');
+                    document.getElementById('student-status').innerText = "Thầy ra đề TRẮC NGHIỆM! Xem bàn cờ và chọn nút câu trả lời:";
+                } else {
+                    // Chế độ bốc cờ: Mở tương tác di chuyển quân, ẩn bộ nút chữ
+                    parseAndDrawFEN(data.fen, 'student-board', true);
+                    document.getElementById('answers-area').classList.add('hidden');
+                    document.getElementById('submit-btn-area').classList.add('hidden');
+                    document.getElementById('student-status').innerText = "Thầy ra đề BỐC CỜ! Hãy bấm giữ di chuyển quân cờ để phối hợp:";
+                }
             }
 
             countdownInterval = setInterval(() => {
@@ -249,6 +445,8 @@
                     clearInterval(countdownInterval);
                     if (myRole === 'student') {
                         document.getElementById('answers-area').classList.add('hidden');
+                        document.getElementById('submit-btn-area').classList.add('hidden');
+                        renderBoardGraphics('student-board', false); 
                         document.getElementById('student-status').innerText = "🛑 Hết thời gian làm bài!";
                         document.getElementById('timer').innerText = "00:00";
                     } else {
@@ -264,7 +462,7 @@
                 const textStyle = data.isCorrect ? "color:#27ae60; font-weight:bold;" : "color:#c0392b;";
                 const statusSymbol = data.isCorrect ? "✅ ĐÚNG" : "❌ SAI";
                 
-                logs.innerHTML += `<p>• Học trò <b>${data.name}</b> chọn câu [${data.answer}] -> <span style="${textStyle}">${statusSymbol}</span></p>`;
+                logs.innerHTML += `<p>• Học trò <b>${data.name}</b> trả lời: [${data.answer}] -> <span style="${textStyle}">${statusSymbol}</span></p>`;
                 logs.scrollTop = logs.scrollHeight; 
             }
         });

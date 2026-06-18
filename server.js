@@ -9,8 +9,13 @@ const io = new Server(server);
 app.use(express.static('public'));
 
 let leaderboard = {}; 
-let currentQuestion = null; 
 let answeredUsers = new Set(); 
+
+let globalGameState = {
+    mode: 'demo', // 'demo' (Trình diễn) hoặc 'quiz' (Làm câu hỏi)
+    boardState: null, // Lưu vị trí các quân cờ hiện tại trên bảng của HLV
+    currentQuiz: null // Lưu thông tin câu hỏi nếu đang trong chế độ quiz
+};
 
 io.on('connection', (socket) => {
     console.log('Người dùng kết nối:', socket.id);
@@ -19,33 +24,30 @@ io.on('connection', (socket) => {
         socket.username = data.name || 'Ẩn danh';
         socket.role = data.role; 
         
-        // Khởi tạo cấu trúc lưu trữ gồm cả Điểm số và Tổng thời gian
         if (socket.role === 'student' && !leaderboard[socket.username]) {
             leaderboard[socket.username] = { points: 0, totalTime: 0 };
         }
         
         io.emit('update_leaderboard', leaderboard);
+        socket.emit('init_game_state', globalGameState);
+        
+        if (globalGameState.mode === 'quiz' && answeredUsers.has(socket.username)) {
+            socket.emit('student_already_submitted');
+        }
+    });
 
-        if (currentQuestion && socket.role === 'student') {
-            let timeLeft = Math.round((currentQuestion.endTime - Date.now()) / 1000);
-            if (timeLeft > 0 && !answeredUsers.has(socket.username)) {
-                socket.emit('new_question', {
-                    type: currentQuestion.type,
-                    fen: currentQuestion.fen,
-                    a: currentQuestion.a,
-                    b: currentQuestion.b,
-                    c: currentQuestion.c,
-                    d: currentQuestion.d,
-                    seconds: timeLeft
-                });
-            }
+    socket.on('coach_demo_move', (boardState) => {
+        if (globalGameState.mode === 'demo') {
+            globalGameState.boardState = boardState; 
+            socket.broadcast.emit('sync_demo_board', boardState); 
         }
     });
 
     socket.on('send_question', (data) => {
         let seconds = parseInt(data.seconds) || 30;
         
-        currentQuestion = {
+        globalGameState.mode = 'quiz';
+        globalGameState.currentQuiz = {
             type: data.type,
             fen: data.fen,
             a: data.a,
@@ -59,38 +61,32 @@ io.on('connection', (socket) => {
         };
         
         answeredUsers.clear(); 
-        
-        io.emit('new_question', {
-            type: data.type,
-            fen: data.fen,
-            a: data.a,
-            b: data.b,
-            c: data.c,
-            d: data.d,
-            seconds: seconds
-        });
+        io.emit('new_question', globalGameState.currentQuiz);
+    });
+
+    socket.on('stop_quiz_mode', () => {
+        globalGameState.mode = 'demo';
+        globalGameState.currentQuiz = null;
+        io.emit('switch_to_demo_mode', globalGameState.boardState); 
     });
 
     socket.on('submit_answer', (selectedAnswer) => {
-        if (socket.role === 'coach') return; 
+        if (socket.role === 'coach' || globalGameState.mode !== 'quiz') return; 
 
-        if (answeredUsers.has(socket.username)) {
-            return; 
-        }
+        if (answeredUsers.has(socket.username)) return; 
         answeredUsers.add(socket.username); 
 
-        let timeSpent = Math.round((Date.now() - currentQuestion.startTime) / 1000);
-        if (timeSpent > currentQuestion.totalSeconds) {
-            timeSpent = currentQuestion.totalSeconds;
+        let timeSpent = Math.round((Date.now() - globalGameState.currentQuiz.startTime) / 1000);
+        if (timeSpent > globalGameState.currentQuiz.totalSeconds) {
+            timeSpent = globalGameState.currentQuiz.totalSeconds;
         }
 
-        const isCorrect = currentQuestion && selectedAnswer === currentQuestion.correctAnswer;
+        const isCorrect = globalGameState.currentQuiz && selectedAnswer === globalGameState.currentQuiz.correctAnswer;
         
-        // Tích lũy thời gian làm bài và điểm số vào hệ thống Grand Prix
         if (leaderboard[socket.username] !== undefined) {
-            leaderboard[socket.username].totalTime += timeSpent; // Cộng dồn thời gian suy nghĩ
+            leaderboard[socket.username].totalTime += timeSpent;
             if (isCorrect) {
-                leaderboard[socket.username].points += 10; // Đúng thì cộng điểm
+                leaderboard[socket.username].points += 10;
             }
         }
 
@@ -114,5 +110,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Server Grand Prix dang chay tai cong: ${PORT}`);
+    console.log(`Server dang chay tai cong: ${PORT}`);
 });

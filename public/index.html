@@ -3,16 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đấu Trường Cờ Vua Grand Prix - Bản Chuyên Nghiệp</title>
+    <title>Đấu Trường Cờ Vua Grand Prix - Đầy Đủ Tính Năng</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 950px; margin: 0 auto; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+        
+        /* LAYOUT 3 CỘT: CÓ HAI CÁNH BÊN TRỐNG DÀNH CHO QUẢNG CÁO */
+        .app-grid {
+            display: grid;
+            grid-template-columns: 200px 1fr 200px;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .ad-sidebar {
+            background: #e2e8f0;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            min-height: 500px;
+        }
+        
+        .container { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
         h1, h2, h3 { color: #2c3e50; margin-top: 0; }
         .hidden { display: none !important; }
         
         input, select, textarea { padding: 10px; width: 100%; margin-bottom: 12px; font-size: 15px; border: 1px solid #ccc; border-radius: 6px; }
         textarea { resize: vertical; height: 60px; font-family: monospace; font-weight: bold; }
+        
         .btn { padding: 12px 20px; cursor: pointer; border: none; border-radius: 6px; background-color: #007bff; color: white; font-weight: bold; font-size: 15px; transition: 0.2s; }
         .btn:hover { background-color: #0056b3; }
         .btn-danger { background-color: #dc3545; }
@@ -43,15 +70,17 @@
         .square.dark { background-color: #b58863; }
         .square.selected { background-color: #74b9ff !important; } 
         
+        /* TÍNH NĂNG MỚI: ĐÁNH DẤU Ô MÀU ĐỎ TRONG SUỐT KIỂU LICHESS */
+        .square.highlighted-danger {
+            background-color: rgba(231, 76, 60, 0.65) !important;
+        }
+        
         .arrows-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 10;
         }
         
-        .piece-img {
-            width: 90%; height: 90%; object-fit: contain;
-            cursor: pointer; transition: transform 0.1s; z-index: 2;
-        }
+        .piece-img { width: 90%; height: 90%; object-fit: contain; cursor: pointer; transition: transform 0.1s; z-index: 2; }
         .piece-img:hover { transform: scale(1.08); }
         
         .answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
@@ -73,143 +102,158 @@
         tr:nth-child(even) { background-color: #f8f9fa; }
         .rank-1 { font-weight: bold; color: #f1c40f; }
 
-        @media (max-width: 768px) {
-            .coach-layout { grid-template-columns: 1fr; }
+        /* ĐIỀU CHỈNH RESPONSIVE TRÊN ĐIỆN THOẠI KHÔNG BỊ VỠ */
+        @media (max-width: 1100px) {
+            .app-grid { grid-template-columns: 1fr; }
+            .ad-sidebar { min-height: 100px; }
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div id="login-screen">
-            <h2>Chào mừng thầy và học trò đến với lớp học Cờ Vua</h2>
-            <p>Nhập tên hiển thị của bạn để tham gia vào hệ thống giải đấu Grand Prix:</p>
-            <input type="text" id="username" placeholder="Ví dụ: Gia Bảo, Tuấn Kiệt... (HLV không cần nhập)">
-            <br><br>
-            <button class="btn" onclick="joinRoom('student')">Vào Lớp (Học Trò)</button>
-            <button class="btn" onclick="joinRoom('coach')" style="background-color: #6c757d;">Tôi là HLV</button>
+    <div class="app-grid">
+        <div class="ad-sidebar" id="ad-left">
+            <p>📢 KHÔNG GIAN<br>QUẢNG CÁO 1</p>
+            <p style="font-size: 12px; font-weight: normal; color:#94a3b8;">(Bro chèn ảnh banner chiêu sinh lớp cờ vào đây nha)</p>
         </div>
 
-        <div id="student-screen" class="hidden">
-            <div style="text-align: center;">
-                <span id="student-mode-badge" class="mode-badge" style="background: #e8f4f8; color: #2980b9;">📺 Chế độ: Thầy giảng bài (Khóa bàn cờ)</span>
-                <br>
-                <span id="student-turn-badge" class="turn-badge" style="background:#fff; border:1px solid #ccc;">Lượt đi: Trắng</span>
-            </div>
-            <h2>Giải Thế Cờ Học Phần</h2>
-            <div class="board-container">
-                <div id="student-board" class="chess-board"></div>
-                <svg id="student-arrows-svg" class="arrows-overlay"></svg>
-            </div>
-            <div id="timer">00:00</div>
-            <p id="student-status" class="status-text">Đang đồng bộ bàn cờ trực tiếp với Thầy...</p>
-            
-            <div id="answers-area" class="answers-grid hidden">
-                <button class="btn btn-ans" onclick="submitQuizAnswer('A')">A: <span id="text-a"></span></button>
-                <button class="btn btn-ans" onclick="submitQuizAnswer('B')">B: <span id="text-b"></span></button>
-                <button class="btn btn-ans" onclick="submitQuizAnswer('C')">C: <span id="text-c"></span></button>
-                <button class="btn btn-ans" onclick="submitQuizAnswer('D')">D: <span id="text-d"></span></button>
+        <div class="container">
+            <div id="login-screen">
+                <h2>Chào mừng thầy và học trò đến với lớp học Cờ Vua</h2>
+                <p>Nhập tên hiển thị của bạn để tham gia vào hệ thống giải đấu Grand Prix:</p>
+                <input type="text" id="username" placeholder="Ví dụ: Gia Bảo, Tuấn Kiệt... (HLV không cần nhập)">
+                <br><br>
+                <button class="btn" onclick="joinRoom('student')">Vào Lớp (Học Trò)</button>
+                <button class="btn" onclick="joinRoom('coach')" style="background-color: #6c757d;">Tôi là HLV</button>
             </div>
 
-            <div id="student-text-answer-area" class="hidden" style="max-width:400px; margin: 15px auto; text-align:center;">
-                <label style="font-weight:bold; display:block; margin-bottom:8px; text-align:left;">Nhập nước đi/đáp án của em:</label>
-                <input type="text" id="student-typed-input" placeholder="Ví dụ gõ: e4, Nf3, hoặc e2-e4..." style="font-size:16px; text-align:center;">
-                <button class="btn btn-success" onclick="confirmStudentTypedAnswer()" style="width:100%; font-size:16px; margin-top:5px;">Nộp Câu Trả Lời 🚀</button>
-            </div>
-        </div>
-
-        <div id="coach-screen" class="hidden">
-            <div style="text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                <span id="coach-mode-badge" class="mode-badge" style="background: #e8f8f5; color: #27ae60;">📺 TRẠNG THÁI: ĐANG TRÌNH DIỄN BÀI GIẢNG</span>
-                <span id="coach-turn-badge" class="turn-badge" style="background: #34495e; color: #fff;">Lượt đi: Lượt Trắng</span>
-            </div>
-            <h2>Bảng Điều Khiển Huấn Luyện Viên</h2>
-            <div class="coach-layout">
-                <div>
-                    <h3>Công cụ Trình chiếu / Ra đề</h3>
-                    
-                    <label><b>Chọn Chế Độ Thiết Lập Thế Cờ:</b></label>
-                    <select id="board-setup-mode" onchange="handleBoardSetupModeChange()">
-                        <option value="starting">Chế độ A: Đi từ đầu ván / Nhập chuỗi nước đi PGN</option>
-                        <option value="custom_fen">Chế độ B: DÁN CHUỖI FEN tùy chỉnh</option>
-                    </select>
-
-                    <div id="pgn-input-wrapper">
-                        <label>Chuỗi nước đi hiện tại (Tự động ghi lại / Hoặc dán chuỗi nước đi vào để tua nhanh):</label>
-                        <textarea id="input-pgn" placeholder="Ví dụ: e2-e4 g1-f3 d2-d4..."></textarea>
-                    </div>
-
-                    <div id="fen-input-wrapper" class="hidden">
-                        <label>Dán chuỗi FEN thế cờ muốn giảng bài:</label>
-                        <input type="text" id="input-fen" placeholder="r1bqk1nr/pppp1ppp/... w KQkq -">
-                    </div>
-                    
-                    <div style="margin: 10px 0; display: flex; gap: 10px;">
-                        <button class="btn btn-warning" onclick="undoCoachMove()" style="flex: 1;">↩️ Quay Lại Nước Trước</button>
-                        <button class="btn btn-danger" onclick="clearCoachArrows()" style="flex: 1; background-color:#7f8c8d;">🧹 Xóa Mũi Tên</button>
-                    </div>
-                    
-                    <hr style="border: 1px dashed #e2e8f0; margin: 15px 0;">
-
-                    <label><b>Cấu hình Chế Độ Câu Hỏi:</b></label>
-                    <select id="input-type" onchange="toggleCoachInputs()">
-                        <option value="quiz">Chế độ 1: Trắc nghiệm (A, B, C, D)</option>
-                        <option value="text">Chế độ 2: Tự luận (Học trò tự gõ chữ trả lời)</option>
-                    </select>
-
-                    <div id="area-quiz-inputs">
-                        <label>Đáp án câu A:</label> <input type="text" id="input-a" value="Ng5">
-                        <label>Đáp án câu B:</label> <input type="text" id="input-b" value="d3">
-                        <label>Đáp án câu C:</label> <input type="text" id="input-c" value="c3">
-                        <label>Đáp án câu D:</label> <input type="text" id="input-d" value="O-O">
-                        <label>Đáp án đúng trắc nghiệm:</label>
-                        <select id="input-correct-quiz">
-                            <option value="A">Câu A</option>
-                            <option value="B">Câu B</option>
-                            <option value="C">Câu C</option>
-                            <option value="D">Câu D</option>
-                        </select>
-                    </div>
-
-                    <div id="area-move-inputs" class="hidden">
-                        <label><b>Nhập đáp án đúng chính xác (Thầy cô tự gõ chữ kết quả):</b></label>
-                        <input type="text" id="input-correct-move" placeholder="Ví dụ gõ: e4, Nf3, hoặc e2-e4, Qxf7#..." style="font-weight:bold; color:#d35400; background:#fffdf0;">
-                    </div>
-                    
-                    <label>Thời gian làm bài (giây):</label>
-                    <input type="number" id="input-seconds" value="30">
-                    
-                    <button id="btn-fire-quiz" class="btn" onclick="sendQuestion()" style="width:100%; background-color:#e67e22; margin-top:10px; font-size:16px;">🚀 PHÁT ĐỀ BÀI ĐẾN CẢ LỚP</button>
-                    <button id="btn-stop-quiz" class="btn btn-danger hidden" onclick="stopQuizAndBackToDemo()" style="width:100%; margin-top:10px; font-size:16px;">🛑 KẾT THÚC CÂU HỎI & TRỞ LẠI GIẢNG BÀI</button>
-                    
-                    <button class="btn btn-danger" onclick="resetLeaderboard()" style="width:100%; margin-top:20px; opacity:0.6;">Reset Điểm Toàn Bộ Lớp</button>
+            <div id="student-screen" class="hidden">
+                <div style="text-align: center;">
+                    <span id="student-mode-badge" class="mode-badge" style="background: #e8f4f8; color: #2980b9;">📺 Chế độ: Thầy giảng bài (Khóa bàn cờ)</span>
+                    <br>
+                    <span id="student-turn-badge" class="turn-badge" style="background:#fff; border:1px solid #ccc;">Lượt đi: Trắng</span>
                 </div>
+                <h2>Giải Thế Cờ Học Phần</h2>
+                <div class="board-container">
+                    <div id="student-board" class="chess-board"></div>
+                    <svg id="student-arrows-svg" class="arrows-overlay"></svg>
+                </div>
+                <div id="timer">00:00</div>
+                <p id="student-status" class="status-text">Đang đồng bộ bàn cờ trực tiếp với Thầy...</p>
                 
-                <div>
-                    <div class="board-container">
-                        <div id="coach-board" class="chess-board" oncontextmenu="return false;"></div>
-                        <svg id="coach-arrows-svg" class="arrows-overlay" oncontextmenu="return false;"></svg>
-                    </div>
-                    <div id="timer-coach">Còn lại: --s</div>
-                    <h3>Nhật ký học trò nộp đáp án:</h3>
-                    <div id="coach-logs" class="log-box"></div>
+                <div id="answers-area" class="answers-grid hidden">
+                    <button class="btn btn-ans" onclick="submitQuizAnswer('A')">A: <span id="text-a"></span></button>
+                    <button class="btn btn-ans" onclick="submitQuizAnswer('B')">B: <span id="text-b"></span></button>
+                    <button class="btn btn-ans" onclick="submitQuizAnswer('C')">C: <span id="text-c"></span></button>
+                    <button class="btn btn-ans" onclick="submitQuizAnswer('D')">D: <span id="text-d"></span></button>
                 </div>
+
+                <div id="student-text-answer-area" class="hidden" style="max-width:400px; margin: 15px auto; text-align:center;">
+                    <label style="font-weight:bold; display:block; margin-bottom:8px; text-align:left;">Nhập nước đi/đáp án của em:</label>
+                    <input type="text" id="student-typed-input" placeholder="Ví dụ gõ: e4, Nf3, hoặc e2-e4..." style="font-size:16px; text-align:center;">
+                    <button class="btn btn-success" onclick="confirmStudentTypedAnswer()" style="width:100%; font-size:16px; margin-top:5px;">Nộp Câu Trả Lời 🚀</button>
+                </div>
+            </div>
+
+            <div id="coach-screen" class="hidden">
+                <div style="text-align: left; display: flex; justify-content: space-between; align-items: center;">
+                    <span id="coach-mode-badge" class="mode-badge" style="background: #e8f8f5; color: #27ae60;">📺 TRẠNG THÁI: ĐANG TRÌNH DIỄN BÀI GIẢNG</span>
+                    <span id="coach-turn-badge" class="turn-badge" style="background: #34495e; color: #fff;">Lượt đi: Lượt Trắng</span>
+                </div>
+                <h2>Bảng Điều Khiển Huấn Luyện Viên</h2>
+                <div class="coach-layout">
+                    <div>
+                        <h3>Công cụ Trình chiếu / Ra đề</h3>
+                        <p style="font-size:12px; color:#e67e22; margin-top:-10px;">💡 Mẹo Lichess: Click chuột phải vào ô để tô màu đỏ. Kéo chuột phải để vẽ mũi tên.</p>
+                        
+                        <label><b>Chọn Chế Độ Thiết Lập Thế Cờ:</b></label>
+                        <select id="board-setup-mode" onchange="handleBoardSetupModeChange()">
+                            <option value="starting">Chế độ A: Đi từ đầu ván / Nhập chuỗi nước đi PGN</option>
+                            <option value="custom_fen">Chế độ B: DÁN CHUỖI FEN tùy chỉnh</option>
+                        </select>
+
+                        <div id="pgn-input-wrapper">
+                            <label>Chuỗi nước đi hiện tại (Tự động ghi lại / Hoặc dán chuỗi nước đi vào để tua nhanh):</label>
+                            <textarea id="input-pgn" placeholder="Ví dụ: e2-e4 g1-f3 d2-d4..."></textarea>
+                        </div>
+
+                        <div id="fen-input-wrapper" class="hidden">
+                            <label>Dán chuỗi FEN thế cờ muốn giảng bài:</label>
+                            <input type="text" id="input-fen" placeholder="r1bqk1nr/pppp1ppp/... w KQkq -">
+                        </div>
+                        
+                        <div style="margin: 10px 0; display: flex; gap: 10px;">
+                            <button class="btn btn-warning" onclick="undoCoachMove()" style="flex: 1;">↩️ Quay Lại Nước Trước</button>
+                            <button class="btn btn-danger" onclick="clearCoachMarkings()" style="flex: 1; background-color:#7f8c8d;">🧹 Xóa Mũi Tên & Ô Màu</button>
+                        </div>
+                        
+                        <hr style="border: 1px dashed #e2e8f0; margin: 15px 0;">
+
+                        <label><b>Cấu hình Chế Độ Câu Hỏi:</b></label>
+                        <select id="input-type" onchange="toggleCoachInputs()">
+                            <option value="quiz">Chế độ 1: Trắc nghiệm (A, B, C, D)</option>
+                            <option value="text">Chế độ 2: Tự luận (Học trò tự gõ chữ trả lời)</option>
+                        </select>
+
+                        <div id="area-quiz-inputs">
+                            <label>Đáp án câu A:</label> <input type="text" id="input-a" value="Ng5">
+                            <label>Đáp án câu B:</label> <input type="text" id="input-b" value="d3">
+                            <label>Đáp án câu C:</label> <input type="text" id="input-c" value="c3">
+                            <label>Đáp án câu D:</label> <input type="text" id="input-d" value="O-O">
+                            <label>Đáp án đúng trắc nghiệm:</label>
+                            <select id="input-correct-quiz">
+                                <option value="A">Câu A</option>
+                                <option value="B">Câu B</option>
+                                <option value="C">Câu C</option>
+                                <option value="D">Câu D</option>
+                            </select>
+                        </div>
+
+                        <div id="area-move-inputs" class="hidden">
+                            <label><b>Nhập đáp án đúng chính xác (Thầy cô tự gõ chữ kết quả):</b></label>
+                            <input type="text" id="input-correct-move" placeholder="Ví dụ gõ: e4, Nf3, hoặc e2-e4, Qxf7#..." style="font-weight:bold; color:#d35400; background:#fffdf0;">
+                        </div>
+                        
+                        <label>Thời gian làm bài (giây):</label>
+                        <input type="number" id="input-seconds" value="30">
+                        
+                        <button id="btn-fire-quiz" class="btn" onclick="sendQuestion()" style="width:100%; background-color:#e67e22; margin-top:10px; font-size:16px;">🚀 PHÁT ĐỀ BÀI ĐẾN CẢ LỚP</button>
+                        <button id="btn-stop-quiz" class="btn btn-danger hidden" onclick="stopQuizAndBackToDemo()" style="width:100%; margin-top:10px; font-size:16px;">🛑 KẾT THÚC CÂU HỎI & TRỞ LẠI GIẢNG BÀI</button>
+                        
+                        <button class="btn btn-danger" onclick="resetLeaderboard()" style="width:100%; margin-top:20px; opacity:0.6;">Reset Điểm Toàn Bộ Lớp</button>
+                    </div>
+                    
+                    <div>
+                        <div class="board-container">
+                            <div id="coach-board" class="chess-board" oncontextmenu="return false;"></div>
+                            <svg id="coach-arrows-svg" class="arrows-overlay" oncontextmenu="return false;"></svg>
+                        </div>
+                        <div id="timer-coach">Còn lại: --s</div>
+                        <h3>Nhật ký học trò nộp đáp án:</h3>
+                        <div id="coach-logs" class="log-box"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="leaderboard-area" class="leaderboard-section hidden">
+                <h3>🏆 BẢNG VÀNG TÍCH LŨY GRAND PRIX 🏆</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Hạng</th>
+                            <th>Học Trò</th>
+                            <th>Điểm Tích Lũy</th>
+                            <th>⏱️ Tổng Thời Gian Tốn</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body"></tbody>
+                </table>
             </div>
         </div>
 
-        <div id="leaderboard-area" class="leaderboard-section hidden">
-            <h3>🏆 BẢNG VÀNG TÍCH LŨY GRAND PRIX 🏆</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Hạng</th>
-                        <th>Học Trò</th>
-                        <th>Điểm Tích Lũy</th>
-                        <th>⏱️ Tổng Thời Gian Tốn</th>
-                    </tr>
-                </thead>
-                <tbody id="leaderboard-body"></tbody>
-            </table>
+        <div class="ad-sidebar" id="ad-right">
+            <p>📢 KHÔNG GIAN<br>QUẢNG CÁO 2</p>
+            <p style="font-size: 12px; font-weight: normal; color:#94a3b8;">(Bro chèn hình bán đồng hồ, bàn cờ cao cấp ở đây nha)</p>
         </div>
     </div>
 
@@ -230,6 +274,7 @@
         let boardHistory = []; 
         let playedMovesTextList = []; 
         let coachArrows = []; 
+        let coachHighlights = []; // Danh sách lưu trữ ô màu đỏ
         let rightClickStartSquare = null; 
 
         const pieceImages = {
@@ -247,7 +292,6 @@
             'k': 'https://upload.wikimedia.org/wikipedia/commons/f/f0/Chess_kdt45.svg'
         };
 
-        // BUG 1 VÁ TRIỆT ĐỂ TẠI ĐÂY: Hàm tự dịch mảng quân cờ hiện tại thành chuỗi FEN chuẩn xác
         function generateFENFromCurrentState() {
             const files = ['a','b','c','d','e','f','g','h'];
             let fenRows = [];
@@ -460,7 +504,11 @@
                     const square = file + rank;
                     
                     const squareDiv = document.createElement('div');
-                    squareDiv.className = 'square ' + ((r + f) % 2 === 0 ? 'light' : 'dark');
+                    
+                    // KIỂM TRA ĐỂ TÔ Ô MÀU ĐỎ THỜI GIAN THỰC
+                    let highlightClass = coachHighlights.includes(square) ? ' highlighted-danger' : '';
+                    squareDiv.className = 'square ' + ((r + f) % 2 === 0 ? 'light' : 'dark') + highlightClass;
+                    
                     squareDiv.dataset.square = square;
                     squareDiv.dataset.row = r;
                     squareDiv.dataset.col = f;
@@ -485,6 +533,9 @@
                             if (e.button === 2 && rightClickStartSquare) {
                                 if (rightClickStartSquare !== square) {
                                     addCoachArrow(rightClickStartSquare, square);
+                                } else {
+                                    // TÍNH NĂNG MỚI: Click đơn chuột phải vào cùng 1 ô -> Toggle ô màu đỏ chuẩn Lichess
+                                    toggleCoachSquareHighlight(square);
                                 }
                                 rightClickStartSquare = null;
                             }
@@ -511,7 +562,7 @@
                 }
             } else {
                 const fromSquare = selectedSquare;
-                const toSquare = square;
+                let toSquare = square;
                 
                 document.querySelector(`#${boardId} [data-square="${fromSquare}"]`).classList.remove('selected');
                 selectedSquare = null;
@@ -519,7 +570,21 @@
                 if (fromSquare === toSquare) return;
 
                 if (localBoardState[fromSquare]) {
-                    localBoardState[toSquare] = localBoardState[fromSquare];
+                    let pChar = localBoardState[fromSquare];
+                    let isPawn = pChar.toLowerCase() === 'p';
+                    let toRank = parseInt(toSquare[1]);
+                    
+                    // TÍNH NĂNG MỚI: TỰ ĐỘNG PHONG CẤP THEO Ý MUỐN CỦA HLV
+                    if (isPawn && ((pChar === 'P' && toRank === 8) || (pChar === 'p' && toRank === 1))) {
+                        let choice = prompt("Phong cấp thành quân gì? (Gõ chữ viết tắt: Q = Hậu, R = Xe, B = Tượng, N = Mã):");
+                        if (!choice || !['Q','R','B','N','q','r','b','n'].includes(choice)) {
+                            choice = 'Q'; 
+                        }
+                        choice = choice.toUpperCase();
+                        pChar = (pChar === 'P') ? choice : choice.toLowerCase();
+                    }
+
+                    localBoardState[toSquare] = pChar;
                     delete localBoardState[fromSquare];
                     
                     renderBoardGraphics(boardId, true);
@@ -544,6 +609,18 @@
             document.getElementById('coach-turn-badge').innerText = `Lượt đi: ${turnText}`;
         }
 
+        // TOGGLE Ô MÀU ĐỎ CỦA HLV VÀ GỬI LÊN SERVER
+        function toggleCoachSquareHighlight(square) {
+            const idx = coachHighlights.indexOf(square);
+            if (idx !== -1) {
+                coachHighlights.splice(idx, 1);
+            } else {
+                coachHighlights.push(square);
+            }
+            renderBoardGraphics('coach-board', true);
+            socket.emit('coach_sync_highlights', coachHighlights);
+        }
+
         function addCoachArrow(from, to) {
             const index = coachArrows.findIndex(a => a.from === from && a.to === to);
             if (index !== -1) {
@@ -555,10 +632,13 @@
             socket.emit('coach_sync_arrows', coachArrows);
         }
 
-        function clearCoachArrows() {
+        function clearCoachMarkings() {
             coachArrows = [];
+            coachHighlights = [];
             drawArrowsOnSvg('coach-arrows-svg', coachArrows);
+            renderBoardGraphics('coach-board', true);
             socket.emit('coach_sync_arrows', coachArrows);
+            socket.emit('coach_sync_highlights', coachHighlights);
         }
 
         function drawArrowsOnSvg(svgId, arrowsList) {
@@ -617,12 +697,11 @@
             if (currentSystemMode === 'demo') syncCoachStateToServ();
         });
 
-        // HLV PHÁT ĐỀ
         function sendQuestion() {
             const type = document.getElementById('input-type').value;
             const setupMode = document.getElementById('board-setup-mode').value;
             
-            // BUG 1 SỬA TRIỆT ĐỂ: Nếu ở chế độ starting, tự quét mảng cờ hiện tại biến đổi thành FEN để truyền bài tập
+            // SỬA LỖI TRẢ VỀ TỪ ĐẦU: Hàm tự động biên dịch thế cờ thầy đang giảng dở dang thành FEN thời gian thực
             let finalFen = (setupMode === 'starting') ? generateFENFromCurrentState() : (document.getElementById('input-fen').value.trim() || startFEN);
             
             let correctAnswer = document.getElementById(type === 'quiz' ? 'input-correct-quiz' : 'input-correct-move').value.trim();
@@ -680,7 +759,6 @@
             }
         }
 
-        // BIÊN SOẠN HÀM HIỂN THỊ CHẾ ĐỘ RA ĐỀ CHUNG ĐỂ SỬA LỖI ĐỒNG HỒ CHO CẢ LỚP VÀ KHÁCH VÀO SAU
         function launchQuizInterface(data, secondsLeft) {
             if (countdownInterval) clearInterval(countdownInterval); 
             let timeLeft = secondsLeft;
@@ -749,9 +827,12 @@
                         parseAndDrawFEN(startFEN, 'student-board', false);
                     }
                     if(gameState.arrows) drawArrowsOnSvg('student-arrows-svg', gameState.arrows);
+                    if(gameState.highlights) {
+                        coachHighlights = gameState.highlights;
+                        renderBoardGraphics('student-board', false);
+                    }
                     setStudentDemoUIMode();
                 } else if (gameState.mode === 'quiz' && gameState.timeLeft > 0) {
-                    // Tự động kích hoạt hiển thị bài tập cho học sinh vào trễ
                     launchQuizInterface(gameState.currentQuiz, gameState.timeLeft);
                 }
             } else {
@@ -781,7 +862,15 @@
             }
         });
 
-        // BUG 2 VÁ TRIỆT ĐỂ: Bắt sự kiện new_question và kích hoạt bộ đếm thời gian thực chuẩn số giây
+        // Học trò đồng bộ ô tô màu đỏ từ thầy cô
+        socket.on('update_student_highlights', (highlights) => {
+            if (myRole === 'student' && currentSystemMode === 'demo') {
+                coachHighlights = highlights;
+                renderBoardGraphics('student-board', false);
+            }
+        });
+
+        // SỬA LỖI NaN TIMER: Tiếp nhận biến chính xác từng mili-giây
         socket.on('new_question', (data) => {
             launchQuizInterface(data, data.seconds);
         });
@@ -798,6 +887,7 @@
                     localBoardState = data.boardState;
                     currentTurn = data.currentTurn;
                     document.getElementById('student-turn-badge').innerText = `Lượt đi: ${currentTurn === 'w' ? 'Trắng' : 'Đen'}`;
+                    coachHighlights = data.highlights || [];
                     renderBoardGraphics('student-board', false);
                 }
                 drawArrowsOnSvg('student-arrows-svg', data.arrows || []);

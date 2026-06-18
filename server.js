@@ -11,12 +11,13 @@ app.use(express.static('public'));
 let leaderboard = {}; 
 let answeredUsers = new Set(); 
 
-// TRẠNG THÁI HỆ THỐNG TOÀN CỤC CHUẨN HOÁ
+// TRẠNG THÁI TOÀN CỤC BỔ SUNG MẢNG LƯU TRỮ Ô MÀU ĐÁNH DẤU
 let globalGameState = {
     mode: 'demo', 
     boardState: null, 
     currentTurn: 'w', 
     arrows: [], 
+    highlights: [], // Lưu trữ các ô đang được thầy tô màu đỏ
     currentQuiz: null 
 };
 
@@ -33,7 +34,7 @@ io.on('connection', (socket) => {
         
         io.emit('update_leaderboard', leaderboard);
         
-        // Gửi trạng thái kèm thời gian còn lại chính xác cho học trò vào sau hoặc rớt mạng
+        // Đồng bộ đầy đủ mảng ô màu cho học viên mới vào phòng
         socket.emit('init_game_state', {
             ...globalGameState,
             timeLeft: globalGameState.currentQuiz ? Math.round((globalGameState.currentQuiz.endTime - Date.now()) / 1000) : 0
@@ -62,6 +63,14 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Đồng bộ danh sách ô màu từ HLV sang Học trò
+    socket.on('coach_sync_highlights', (highlights) => {
+        if (globalGameState.mode === 'demo') {
+            globalGameState.highlights = highlights;
+            socket.broadcast.emit('update_student_highlights', highlights);
+        }
+    });
+
     socket.on('send_question', (data) => {
         let seconds = parseInt(data.seconds) || 30;
         
@@ -80,7 +89,6 @@ io.on('connection', (socket) => {
         };
         
         answeredUsers.clear(); 
-        // SỬA LỖI NaN: Gửi kèm biến seconds tường minh cho client tiếp nhận
         io.emit('new_question', { ...globalGameState.currentQuiz, seconds: seconds });
     });
 
@@ -90,7 +98,8 @@ io.on('connection', (socket) => {
         io.emit('switch_to_demo_mode', {
             boardState: globalGameState.boardState,
             currentTurn: globalGameState.currentTurn,
-            arrows: globalGameState.arrows
+            arrows: globalGameState.arrows,
+            highlights: globalGameState.highlights
         }); 
     });
 
@@ -134,5 +143,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Server uu hoa dang chay tai cong: ${PORT}`);
+    console.log(`Hệ thống đang hoạt động ổn định tại cổng: ${PORT}`);
 });

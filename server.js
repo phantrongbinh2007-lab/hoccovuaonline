@@ -11,6 +11,7 @@ app.use(express.static('public'));
 let leaderboard = {}; 
 let answeredUsers = new Set(); 
 
+// TRẠNG THÁI HỆ THỐNG TOÀN CỤC CHUẨN HOÁ
 let globalGameState = {
     mode: 'demo', 
     boardState: null, 
@@ -31,7 +32,12 @@ io.on('connection', (socket) => {
         }
         
         io.emit('update_leaderboard', leaderboard);
-        socket.emit('init_game_state', globalGameState);
+        
+        // Gửi trạng thái kèm thời gian còn lại chính xác cho học trò vào sau hoặc rớt mạng
+        socket.emit('init_game_state', {
+            ...globalGameState,
+            timeLeft: globalGameState.currentQuiz ? Math.round((globalGameState.currentQuiz.endTime - Date.now()) / 1000) : 0
+        });
         
         if (globalGameState.mode === 'quiz' && answeredUsers.has(socket.username)) {
             socket.emit('student_already_submitted');
@@ -61,7 +67,7 @@ io.on('connection', (socket) => {
         
         globalGameState.mode = 'quiz';
         globalGameState.currentQuiz = {
-            type: data.type, // 'quiz' (Trắc nghiệm) hoặc 'text' (Tự luận gõ chữ)
+            type: data.type,
             fen: data.fen,
             a: data.a,
             b: data.b,
@@ -74,7 +80,8 @@ io.on('connection', (socket) => {
         };
         
         answeredUsers.clear(); 
-        io.emit('new_question', globalGameState.currentQuiz);
+        // SỬA LỖI NaN: Gửi kèm biến seconds tường minh cho client tiếp nhận
+        io.emit('new_question', { ...globalGameState.currentQuiz, seconds: seconds });
     });
 
     socket.on('stop_quiz_mode', () => {
@@ -127,5 +134,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Server dang chay tai cong: ${PORT}`);
+    console.log(`Server uu hoa dang chay tai cong: ${PORT}`);
 });

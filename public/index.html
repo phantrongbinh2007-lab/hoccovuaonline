@@ -113,7 +113,7 @@
 
             <div id="student-text-answer-area" class="hidden" style="max-width:400px; margin: 15px auto; text-align:center;">
                 <label style="font-weight:bold; display:block; margin-bottom:8px; text-align:left;">Nhập nước đi/đáp án của em:</label>
-                <input type="text" id="student-typed-input" placeholder="Ví dụ gõ: e4, Nf3, e2-e4..." style="font-size:16px; text-align:center;">
+                <input type="text" id="student-typed-input" placeholder="Ví dụ gõ: e4, Nf3, hoặc e2-e4..." style="font-size:16px; text-align:center;">
                 <button class="btn btn-success" onclick="confirmStudentTypedAnswer()" style="width:100%; font-size:16px; margin-top:5px;">Nộp Câu Trả Lời 🚀</button>
             </div>
         </div>
@@ -136,7 +136,7 @@
 
                     <div id="pgn-input-wrapper">
                         <label>Chuỗi nước đi hiện tại (Tự động ghi lại / Hoặc dán chuỗi nước đi vào để tua nhanh):</label>
-                        <textarea id="input-pgn" placeholder="Ví dụ: e2-e4 e7-e5 g1-f3... (Phân cách bằng dấu cách)"></textarea>
+                        <textarea id="input-pgn" placeholder="Ví dụ: e2-e4 g1-f3 d2-d4..."></textarea>
                     </div>
 
                     <div id="fen-input-wrapper" class="hidden">
@@ -180,7 +180,7 @@
                     <input type="number" id="input-seconds" value="30">
                     
                     <button id="btn-fire-quiz" class="btn" onclick="sendQuestion()" style="width:100%; background-color:#e67e22; margin-top:10px; font-size:16px;">🚀 PHÁT ĐỀ BÀI ĐẾN CẢ LỚP</button>
-                    <button id="btn-stop-quiz" class="btn btn-danger hidden" onclick="stopQuizAndBackToDemo()" style="width:100%; margin-top:10px; font-size:16px;">🛑 KỂT THÚC CÂU HỎI & TRỞ LẠI GIẢNG BÀI</button>
+                    <button id="btn-stop-quiz" class="btn btn-danger hidden" onclick="stopQuizAndBackToDemo()" style="width:100%; margin-top:10px; font-size:16px;">🛑 KẾT THÚC CÂU HỎI & TRỞ LẠI GIẢNG BÀI</button>
                     
                     <button class="btn btn-danger" onclick="resetLeaderboard()" style="width:100%; margin-top:20px; opacity:0.6;">Reset Điểm Toàn Bộ Lớp</button>
                 </div>
@@ -228,7 +228,7 @@
         
         let currentTurn = 'w'; 
         let boardHistory = []; 
-        let playedMovesTextList = []; // MẢNG LƯU TRỮ CHUỖI NƯỚC ĐI COORDINATE CỦA THẦY
+        let playedMovesTextList = []; 
         let coachArrows = []; 
         let rightClickStartSquare = null; 
 
@@ -246,6 +246,33 @@
             'q': 'https://upload.wikimedia.org/wikipedia/commons/4/47/Chess_qdt45.svg',
             'k': 'https://upload.wikimedia.org/wikipedia/commons/f/f0/Chess_kdt45.svg'
         };
+
+        // BUG 1 VÁ TRIỆT ĐỂ TẠI ĐÂY: Hàm tự dịch mảng quân cờ hiện tại thành chuỗi FEN chuẩn xác
+        function generateFENFromCurrentState() {
+            const files = ['a','b','c','d','e','f','g','h'];
+            let fenRows = [];
+            for (let r = 0; r < 8; r++) {
+                const rank = 8 - r;
+                let emptyCount = 0;
+                let rowStr = "";
+                for (let f = 0; f < 8; f++) {
+                    const file = files[f];
+                    const square = file + rank;
+                    if (localBoardState[square]) {
+                        if (emptyCount > 0) {
+                            rowStr += emptyCount;
+                            emptyCount = 0;
+                        }
+                        rowStr += localBoardState[square];
+                    } else {
+                        emptyCount++;
+                    }
+                }
+                if (emptyCount > 0) rowStr += emptyCount;
+                fenRows.push(rowStr);
+            }
+            return fenRows.join('/') + " " + currentTurn + " KQkq - 0 1";
+        }
 
         function joinRoom(role) {
             let nameInput = document.getElementById('username').value.trim();
@@ -304,7 +331,7 @@
             if (currentSystemMode !== 'demo') return;
             if (boardHistory.length > 1) {
                 boardHistory.pop(); 
-                playedMovesTextList.pop(); // Xóa nước đi cuối khỏi chuỗi PGN text
+                playedMovesTextList.pop(); 
                 document.getElementById('input-pgn').value = playedMovesTextList.join(' ');
                 
                 let previousState = boardHistory[boardHistory.length - 1];
@@ -348,7 +375,6 @@
             }
         }
 
-        // TÍNH NĂNG TUA THEO CHUỖI NƯỚC ĐI PGN/COORDINATE ĐƯỢC DÁN VÀO Ô TEXTAREA
         function applyMoveSequenceString(moveString) {
             parseAndDrawFEN(startFEN, 'coach-board', true);
             currentTurn = 'w';
@@ -363,7 +389,7 @@
 
             let tokens = moveString.trim().split(/\s+/);
             for (let token of tokens) {
-                if (token.includes('.')) continue; // Lọc bỏ số thứ tự nước đi (1., 2.) nếu có
+                if (token.includes('.')) continue; 
                 let parts = token.split('-');
                 if (parts.length === 2) {
                     let from = parts[0].toLowerCase();
@@ -470,7 +496,7 @@
         }
 
         function handleSquareInteraction(square, boardId) {
-            if (boardId === 'student-board') return; // Chặn tuyệt đối tương tác click của học sinh
+            if (boardId === 'student-board') return; 
 
             if (!selectedSquare) {
                 if (localBoardState[square]) {
@@ -503,7 +529,6 @@
                         currentTurn = currentTurn === 'w' ? 'b' : 'w';
                         updateTurnBadge();
                         
-                        // Tự động append nước đi vào ô textarea chuỗi PGN bài giảng
                         playedMovesTextList.push(moveStr);
                         document.getElementById('input-pgn').value = playedMovesTextList.join(' ');
                         
@@ -578,7 +603,6 @@
             });
         }
 
-        // Đón sự kiện nhập/dán PGN để cập nhật bàn cờ
         document.getElementById('input-pgn').addEventListener('input', function(e) {
             applyMoveSequenceString(e.target.value);
         });
@@ -597,7 +621,9 @@
         function sendQuestion() {
             const type = document.getElementById('input-type').value;
             const setupMode = document.getElementById('board-setup-mode').value;
-            let finalFen = (setupMode === 'starting') ? startFEN : (document.getElementById('input-fen').value.trim() || startFEN);
+            
+            // BUG 1 SỬA TRIỆT ĐỂ: Nếu ở chế độ starting, tự quét mảng cờ hiện tại biến đổi thành FEN để truyền bài tập
+            let finalFen = (setupMode === 'starting') ? generateFENFromCurrentState() : (document.getElementById('input-fen').value.trim() || startFEN);
             
             let correctAnswer = document.getElementById(type === 'quiz' ? 'input-correct-quiz' : 'input-correct-move').value.trim();
 
@@ -637,7 +663,6 @@
             socket.emit('submit_answer', option);
         }
 
-        // HỌC TRÒ NỘP CÂU TRẢ LỜI TỰ LUẬN BẰNG CHỮ GÕ VÀO INPUT
         function confirmStudentTypedAnswer() {
             let typedAns = document.getElementById('student-typed-input').value.trim();
             if (!typedAns) {
@@ -655,60 +680,15 @@
             }
         }
 
-        // ================= ĐỒNG BỘ EVENT TỪ SERVER =================
-        socket.on('init_game_state', (gameState) => {
-            currentSystemMode = gameState.mode;
-            if (myRole === 'student') {
-                if (gameState.mode === 'demo') {
-                    currentTurn = gameState.currentTurn;
-                    document.getElementById('student-turn-badge').innerText = `Lượt đi: ${currentTurn === 'w' ? 'Trắng' : 'Đen'}`;
-                    if(gameState.boardState) {
-                        localBoardState = gameState.boardState;
-                        renderBoardGraphics('student-board', false);
-                    } else {
-                        parseAndDrawFEN(startFEN, 'student-board', false);
-                    }
-                    if(gameState.arrows) drawArrowsOnSvg('student-arrows-svg', gameState.arrows);
-                    setStudentDemoUIMode();
-                }
-            } else {
-                if (gameState.mode === 'quiz') {
-                    currentSystemMode = 'quiz';
-                    document.getElementById('coach-mode-badge').innerText = "📝 TRẠNG THÁI: ĐANG TRONG GIỜ LÀM BÀI";
-                    document.getElementById('coach-mode-badge').style.background = "#fdf2e9";
-                    document.getElementById('coach-mode-badge').style.color = "#e67e22";
-                    document.getElementById('btn-fire-quiz').classList.add('hidden');
-                    document.getElementById('btn-stop-quiz').classList.remove('hidden');
-                }
-            }
-        });
-
-        socket.on('sync_demo_board', (data) => {
-            if (myRole === 'student' && currentSystemMode === 'demo') {
-                localBoardState = data.boardState;
-                currentTurn = data.currentTurn;
-                document.getElementById('student-turn-badge').innerText = `Lượt đi: ${currentTurn === 'w' ? 'Trắng' : 'Đen'}`;
-                renderBoardGraphics('student-board', false); 
-            }
-        });
-
-        socket.on('update_student_arrows', (arrows) => {
-            if (myRole === 'student' && currentSystemMode === 'demo') {
-                drawArrowsOnSvg('student-arrows-svg', arrows);
-            }
-        });
-
-        socket.on('new_question', (data) => {
-            if (countdownInterval) clearInterval(countdownInterval); // Triệt tiêu triệt để trùng lặp timer
-            
-            let timeLeft = data.seconds;
-            selectedSquare = null;
-            currentRecordedMove = '';
-            currentSystemMode = 'quiz'; 
+        // BIÊN SOẠN HÀM HIỂN THỊ CHẾ ĐỘ RA ĐỀ CHUNG ĐỂ SỬA LỖI ĐỒNG HỒ CHO CẢ LỚP VÀ KHÁCH VÀO SAU
+        function launchQuizInterface(data, secondsLeft) {
+            if (countdownInterval) clearInterval(countdownInterval); 
+            let timeLeft = secondsLeft;
+            currentSystemMode = 'quiz';
 
             if (myRole === 'student') {
                 document.getElementById('student-arrows-svg').innerHTML = ''; 
-                document.getElementById('student-typed-input').value = ''; // Reset khung nhập cũ
+                document.getElementById('student-typed-input').value = ''; 
                 document.getElementById('student-mode-badge').innerText = "📝 Chế độ: ĐANG LÀM BÀI KIỂM TRA";
                 document.getElementById('student-mode-badge').style.background = "#fffdf0";
                 document.getElementById('student-mode-badge').style.color = "#e67e22";
@@ -724,7 +704,6 @@
                     document.getElementById('student-text-answer-area').classList.add('hidden');
                     document.getElementById('student-status').innerText = "Thầy ra đề TRẮC NGHIỆM! Hãy chọn đáp án đúng:";
                 } else {
-                    // Chế độ tự luận: Học trò xem bàn cờ tĩnh và tự gõ text chữ trả lời
                     parseAndDrawFEN(data.fen, 'student-board', false); 
                     document.getElementById('answers-area').classList.add('hidden');
                     document.getElementById('student-text-answer-area').classList.remove('hidden'); 
@@ -754,6 +733,57 @@
                     }
                 }
             }, 1000);
+        }
+
+        // ================= ĐỒNG BỘ EVENT TỪ SERVER =================
+        socket.on('init_game_state', (gameState) => {
+            currentSystemMode = gameState.mode;
+            if (myRole === 'student') {
+                if (gameState.mode === 'demo') {
+                    currentTurn = gameState.currentTurn;
+                    document.getElementById('student-turn-badge').innerText = `Lượt đi: ${currentTurn === 'w' ? 'Trắng' : 'Đen'}`;
+                    if(gameState.boardState) {
+                        localBoardState = gameState.boardState;
+                        renderBoardGraphics('student-board', false);
+                    } else {
+                        parseAndDrawFEN(startFEN, 'student-board', false);
+                    }
+                    if(gameState.arrows) drawArrowsOnSvg('student-arrows-svg', gameState.arrows);
+                    setStudentDemoUIMode();
+                } else if (gameState.mode === 'quiz' && gameState.timeLeft > 0) {
+                    // Tự động kích hoạt hiển thị bài tập cho học sinh vào trễ
+                    launchQuizInterface(gameState.currentQuiz, gameState.timeLeft);
+                }
+            } else {
+                if (gameState.mode === 'quiz') {
+                    currentSystemMode = 'quiz';
+                    document.getElementById('coach-mode-badge').innerText = "📝 TRẠNG THÁI: ĐANG TRONG GIỜ LÀM BÀI";
+                    document.getElementById('coach-mode-badge').style.background = "#fdf2e9";
+                    document.getElementById('coach-mode-badge').style.color = "#e67e22";
+                    document.getElementById('btn-fire-quiz').classList.add('hidden');
+                    document.getElementById('btn-stop-quiz').classList.remove('hidden');
+                }
+            }
+        });
+
+        socket.on('sync_demo_board', (data) => {
+            if (myRole === 'student' && currentSystemMode === 'demo') {
+                localBoardState = data.boardState;
+                currentTurn = data.currentTurn;
+                document.getElementById('student-turn-badge').innerText = `Lượt đi: ${currentTurn === 'w' ? 'Trắng' : 'Đen'}`;
+                renderBoardGraphics('student-board', false); 
+            }
+        });
+
+        socket.on('update_student_arrows', (arrows) => {
+            if (myRole === 'student' && currentSystemMode === 'demo') {
+                drawArrowsOnSvg('student-arrows-svg', arrows);
+            }
+        });
+
+        // BUG 2 VÁ TRIỆT ĐỂ: Bắt sự kiện new_question và kích hoạt bộ đếm thời gian thực chuẩn số giây
+        socket.on('new_question', (data) => {
+            launchQuizInterface(data, data.seconds);
         });
 
         socket.on('switch_to_demo_mode', (data) => {

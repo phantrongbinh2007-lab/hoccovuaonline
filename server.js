@@ -12,9 +12,11 @@ let leaderboard = {};
 let answeredUsers = new Set(); 
 
 let globalGameState = {
-    mode: 'demo', // 'demo' (Trình diễn) hoặc 'quiz' (Làm câu hỏi)
-    boardState: null, // Lưu vị trí các quân cờ hiện tại trên bảng của HLV
-    currentQuiz: null // Lưu thông tin câu hỏi nếu đang trong chế độ quiz
+    mode: 'demo', 
+    boardState: null, 
+    currentTurn: 'w', 
+    arrows: [], 
+    currentQuiz: null 
 };
 
 io.on('connection', (socket) => {
@@ -36,10 +38,21 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('coach_demo_move', (boardState) => {
+    socket.on('coach_demo_move', (data) => {
         if (globalGameState.mode === 'demo') {
-            globalGameState.boardState = boardState; 
-            socket.broadcast.emit('sync_demo_board', boardState); 
+            globalGameState.boardState = data.boardState;
+            globalGameState.currentTurn = data.currentTurn;
+            socket.broadcast.emit('sync_demo_board', {
+                boardState: data.boardState,
+                currentTurn: data.currentTurn
+            });
+        }
+    });
+
+    socket.on('coach_sync_arrows', (arrows) => {
+        if (globalGameState.mode === 'demo') {
+            globalGameState.arrows = arrows;
+            socket.broadcast.emit('update_student_arrows', arrows);
         }
     });
 
@@ -48,7 +61,7 @@ io.on('connection', (socket) => {
         
         globalGameState.mode = 'quiz';
         globalGameState.currentQuiz = {
-            type: data.type,
+            type: data.type, // 'quiz' (Trắc nghiệm) hoặc 'text' (Tự luận gõ chữ)
             fen: data.fen,
             a: data.a,
             b: data.b,
@@ -67,7 +80,11 @@ io.on('connection', (socket) => {
     socket.on('stop_quiz_mode', () => {
         globalGameState.mode = 'demo';
         globalGameState.currentQuiz = null;
-        io.emit('switch_to_demo_mode', globalGameState.boardState); 
+        io.emit('switch_to_demo_mode', {
+            boardState: globalGameState.boardState,
+            currentTurn: globalGameState.currentTurn,
+            arrows: globalGameState.arrows
+        }); 
     });
 
     socket.on('submit_answer', (selectedAnswer) => {
@@ -81,7 +98,7 @@ io.on('connection', (socket) => {
             timeSpent = globalGameState.currentQuiz.totalSeconds;
         }
 
-        const isCorrect = globalGameState.currentQuiz && selectedAnswer === globalGameState.currentQuiz.correctAnswer;
+        const isCorrect = globalGameState.currentQuiz && selectedAnswer.trim().toLowerCase() === globalGameState.currentQuiz.correctAnswer.trim().toLowerCase();
         
         if (leaderboard[socket.username] !== undefined) {
             leaderboard[socket.username].totalTime += timeSpent;

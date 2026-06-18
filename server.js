@@ -11,10 +11,11 @@ app.use(express.static('public'));
 let leaderboard = {}; 
 let answeredUsers = new Set(); 
 
+const startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 let globalGameState = {
     mode: 'demo', 
-    boardState: null, 
-    currentTurn: 'w', 
+    fen: startFEN, 
     arrows: [], 
     highlights: [], 
     currentQuiz: null,
@@ -47,12 +48,8 @@ io.on('connection', (socket) => {
 
     socket.on('coach_demo_move', (data) => {
         if (globalGameState.mode === 'demo') {
-            globalGameState.boardState = data.boardState;
-            globalGameState.currentTurn = data.currentTurn;
-            socket.broadcast.emit('sync_demo_board', {
-                boardState: data.boardState,
-                currentTurn: data.currentTurn
-            });
+            globalGameState.fen = data.fen;
+            socket.broadcast.emit('sync_demo_board', { fen: data.fen });
         }
     });
 
@@ -70,10 +67,10 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ================= SIMUL VỚI ĐỒNG HỒ VÀ MÀU QUÂN =================
+    // ================= SIMUL THỜI GIAN THỰC ĐA LUỒNG =================
     socket.on('start_simul', (data) => {
         globalGameState.mode = 'simul';
-        globalGameState.boardState = data.boardState;
+        globalGameState.fen = data.fen;
         globalGameState.simulGames = {};
         
         const startingTimeMs = data.minutes * 60 * 1000;
@@ -81,8 +78,7 @@ io.on('connection', (socket) => {
 
         for (let studentName in leaderboard) {
             globalGameState.simulGames[studentName] = {
-                boardState: JSON.parse(JSON.stringify(data.boardState)), 
-                turn: data.currentTurn, // Thế cờ hiện tại đang là lượt ai
+                fen: data.fen, 
                 coachColor: data.coachColor,
                 wTime: startingTimeMs,
                 bTime: startingTimeMs,
@@ -92,15 +88,13 @@ io.on('connection', (socket) => {
                 lastMove: null
             };
         }
-
         io.emit('simul_started', globalGameState.simulGames);
     });
 
-    // Xử lý trừ thời gian và cộng giây
-    function processSimulMoveTime(game) {
+    function processSimulMoveTime(game, currentTurnColor) {
         let now = Date.now();
         let timeSpent = now - game.lastMoveTimestamp;
-        if (game.turn === 'w') {
+        if (currentTurnColor === 'w') {
             game.wTime -= timeSpent;
             game.wTime += game.incMs;
         } else {
@@ -113,10 +107,11 @@ io.on('connection', (socket) => {
     socket.on('coach_simul_move', (data) => {
         if (globalGameState.mode === 'simul' && globalGameState.simulGames[data.student]) {
             let game = globalGameState.simulGames[data.student];
-            processSimulMoveTime(game);
+            // Lấy màu người vừa đi (ngược với màu hiện tại trong FEN mới)
+            let colorMoved = data.fen.split(' ')[1] === 'w' ? 'b' : 'w';
+            processSimulMoveTime(game, colorMoved);
             
-            game.boardState = data.boardState;
-            game.turn = game.turn === 'w' ? 'b' : 'w';
+            game.fen = data.fen;
             game.lastMove = data.moveStr;
             
             io.emit('simul_update_game', { student: data.student, game: game });
@@ -127,10 +122,10 @@ io.on('connection', (socket) => {
     socket.on('student_simul_move', (data) => {
         if (globalGameState.mode === 'simul' && globalGameState.simulGames[socket.username]) {
             let game = globalGameState.simulGames[socket.username];
-            processSimulMoveTime(game);
+            let colorMoved = data.fen.split(' ')[1] === 'w' ? 'b' : 'w';
+            processSimulMoveTime(game, colorMoved);
             
-            game.boardState = data.boardState;
-            game.turn = game.turn === 'w' ? 'b' : 'w';
+            game.fen = data.fen;
             game.lastMove = data.moveStr;
             
             io.emit('simul_update_game', { student: socket.username, game: game });
@@ -138,7 +133,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ================= CHẾ ĐỘ QUIZ =================
+    // ================= CHẾ ĐỘ QUIZ & KHẢO THÍ =================
     socket.on('send_question', (data) => {
         let seconds = parseInt(data.seconds) || 30;
         globalGameState.mode = 'quiz';
@@ -155,7 +150,7 @@ io.on('connection', (socket) => {
         globalGameState.mode = 'demo';
         globalGameState.currentQuiz = null;
         io.emit('switch_to_demo_mode', {
-            boardState: globalGameState.boardState, currentTurn: globalGameState.currentTurn,
+            fen: globalGameState.fen,
             arrows: globalGameState.arrows, highlights: globalGameState.highlights
         }); 
     });
@@ -189,5 +184,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Server Đa luồng đang hoạt động tại cổng: ${PORT}`);
+    console.log(`Máy chủ Chess Arena đang hoạt động tại cổng: ${PORT}`);
 });

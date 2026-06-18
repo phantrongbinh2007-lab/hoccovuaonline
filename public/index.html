@@ -28,7 +28,7 @@
         .btn-simul { background-color: #8e44ad; color: white; width: 100%; margin-top: 10px; font-size: 16px; border-radius: 8px; border: 2px solid #732d91; }
         .btn-simul:hover { background-color: #9b59b6; box-shadow: 0 0 10px rgba(142, 68, 173, 0.5); }
         
-        .board-container { margin: 15px auto; max-width: 400px; width: 100%; position: relative; }
+        .board-wrapper { margin: 15px auto; max-width: 400px; width: 100%; position: relative; }
         .chess-board { display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); width: 100%; aspect-ratio: 1 / 1; border: 5px solid #34495e; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); overflow: hidden; }
         .square { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; user-select: none; }
         .square.light { background-color: #f0d9b5; }
@@ -40,6 +40,11 @@
         .piece-img { width: 90%; height: 90%; object-fit: contain; cursor: pointer; transition: transform 0.1s; z-index: 2; }
         .piece-img:hover { transform: scale(1.08); }
         
+        /* ĐỒNG HỒ THI ĐẤU SIMUL THỜI GIAN THỰC */
+        .player-clock-bar { display: flex; justify-content: space-between; align-items: center; background: #ecf0f1; padding: 8px 12px; border-radius: 6px; margin-bottom: 5px; font-weight: bold; border: 1px solid #bdc3c7;}
+        .clock-time { font-size: 20px; font-family: monospace; background: #2c3e50; color: #fff; padding: 4px 10px; border-radius: 4px; min-width: 75px; text-align: center; }
+        .clock-active { background: #f1c40f; color: #d35400; box-shadow: 0 0 8px #f1c40f; }
+
         .answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
         .btn-ans { background-color: #2ecc71; color: white; padding: 15px; font-size: 16px; border-radius: 8px; text-align: left; font-weight: bold; }
         
@@ -49,8 +54,6 @@
         .turn-badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 13px; margin-top: 5px; }
 
         .coach-layout { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; text-align: left; }
-        
-        /* TRẠM CHỈ HUY SIMUL NÂNG CẤP */
         .log-box { background: #f8f9fa; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; height: 250px; overflow-y: auto; }
         .simul-item { padding: 10px; margin-bottom: 8px; border-radius: 6px; background: #fff; border: 1px solid #ddd; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
         .simul-item:hover { background: #f1f5f9; border-color: #94a3b8; }
@@ -84,6 +87,7 @@
                 <button class="btn" onclick="joinRoom('coach')" style="background-color: #6c757d;">Tôi là HLV</button>
             </div>
 
+            <!-- MÀN HÌNH HỌC TRÒ -->
             <div id="student-screen" class="hidden">
                 <div style="text-align: center;">
                     <span id="student-mode-badge" class="mode-badge" style="background: #e8f4f8; color: #2980b9;">📺 Chế độ: Thầy giảng bài</span>
@@ -93,10 +97,23 @@
                 
                 <h3 id="student-simul-title" class="hidden" style="text-align:center; color:#8e44ad; margin:10px 0;">⚔️ Bàn đấu của em vs Thầy Bình</h3>
 
-                <div class="board-container">
+                <div class="board-wrapper">
+                    <!-- Đồng hồ đối thủ (Nằm trên) -->
+                    <div id="student-top-clock-bar" class="player-clock-bar hidden">
+                        <span>👤 Thầy Bình</span>
+                        <span id="student-top-clock" class="clock-time">00:00</span>
+                    </div>
+
                     <div id="student-board" class="chess-board"></div>
                     <svg id="student-arrows-svg" class="arrows-overlay"></svg>
+
+                    <!-- Đồng hồ bản thân (Nằm dưới) -->
+                    <div id="student-bottom-clock-bar" class="player-clock-bar hidden">
+                        <span>👤 Bản thân em</span>
+                        <span id="student-bottom-clock" class="clock-time">00:00</span>
+                    </div>
                 </div>
+
                 <div id="timer">00:00</div>
                 <p id="student-status" class="status-text">Đang đồng bộ bàn cờ trực tiếp với Thầy...</p>
                 
@@ -114,6 +131,7 @@
                 </div>
             </div>
 
+            <!-- MÀN HÌNH HLV -->
             <div id="coach-screen" class="hidden">
                 <div style="text-align: left; display: flex; justify-content: space-between; align-items: center;">
                     <span id="coach-mode-badge" class="mode-badge" style="background: #e8f8f5; color: #27ae60;">📺 TRẠNG THÁI: ĐANG TRÌNH DIỄN BÀI GIẢNG</span>
@@ -126,6 +144,7 @@
 
                 <div class="coach-layout">
                     <div>
+                        <!-- PANEL 1: CÔNG CỤ BÀI GIẢNG -->
                         <div id="coach-demo-tools">
                             <h3>Công cụ Trình chiếu / Ra đề</h3>
                             <label><b>Chọn Chế Độ Thiết Lập Thế Cờ:</b></label>
@@ -135,7 +154,7 @@
                             </select>
 
                             <div id="pgn-input-wrapper">
-                                <label>Chuỗi nước đi hiện tại (Tự động ghi lại):</label>
+                                <label>Chuỗi nước đi hiện tại:</label>
                                 <textarea id="input-pgn" placeholder="Ví dụ: e2-e4 g1-f3 d2-d4..."></textarea>
                             </div>
 
@@ -151,7 +170,28 @@
                             
                             <hr style="border: 1px dashed #e2e8f0; margin: 15px 0;">
 
-                            <button id="btn-start-simul" class="btn btn-simul" onclick="startSimulMode()">⚔️ KHAI CHIẾN ĐẤU ĐỒNG LOẠT (SIMUL) LỚP HỌC</button>
+                            <!-- PANEL CẤU HÌNH SIMUL MỚI NÂNG CẤP -->
+                            <div id="simul-config-panel" style="background:#f9f2fb; border:1px solid #d7bde2; padding:15px; border-radius:8px;">
+                                <label><b>⚙️ Cấu hình Đấu Đồng Loạt (Simul):</b></label>
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                                    <div>
+                                        <label style="font-size:13px;">Thầy cầm quân:</label>
+                                        <select id="simul-coach-color" style="margin-bottom:0;">
+                                            <option value="w">Trắng (White)</option>
+                                            <option value="b">Đen (Black)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="font-size:13px;">Thời gian (Phút):</label>
+                                        <input type="number" id="simul-minutes" value="5" style="margin-bottom:0;">
+                                    </div>
+                                    <div style="grid-column: 1 / 3;">
+                                        <label style="font-size:13px;">Cộng thêm (Giây/Nước):</label>
+                                        <input type="number" id="simul-increment" value="5" style="margin-bottom:0;">
+                                    </div>
+                                </div>
+                                <button class="btn btn-simul" onclick="startSimulMode()">⚔️ BẮT ĐẦU ĐẤU ĐỒNG LOẠT</button>
+                            </div>
                             
                             <hr style="border: 1px dashed #e2e8f0; margin: 15px 0;">
 
@@ -177,12 +217,11 @@
 
                             <div id="area-move-inputs" class="hidden">
                                 <label><b>Nhập đáp án đúng chính xác:</b></label>
-                                <input type="text" id="input-correct-move" placeholder="Ví dụ gõ: e4, Nf3, hoặc e2-e4..." style="font-weight:bold; color:#d35400; background:#fffdf0;">
+                                <input type="text" id="input-correct-move" placeholder="Ví dụ gõ: e4, Nf3..." style="font-weight:bold; color:#d35400; background:#fffdf0;">
                             </div>
                             
                             <label>Thời gian làm bài (giây):</label>
                             <input type="number" id="input-seconds" value="30">
-                            
                             <button id="btn-fire-quiz" class="btn" onclick="sendQuestion()" style="width:100%; background-color:#e67e22; margin-top:10px; font-size:16px;">🚀 PHÁT ĐỀ BÀI ĐẾN CẢ LỚP</button>
                             <button class="btn btn-danger" onclick="resetLeaderboard()" style="width:100%; margin-top:20px; opacity:0.6;">Reset Điểm Toàn Bộ Lớp</button>
                         </div>
@@ -194,21 +233,32 @@
                     </div>
                     
                     <div>
-                        <div class="board-container">
+                        <div class="board-wrapper">
+                            <!-- Đồng hồ đối thủ Simul cho Thầy -->
+                            <div id="coach-top-clock-bar" class="player-clock-bar hidden">
+                                <span>👤 Học trò</span>
+                                <span id="coach-top-clock" class="clock-time">00:00</span>
+                            </div>
+
                             <div id="coach-board" class="chess-board" oncontextmenu="return false;"></div>
                             <svg id="coach-arrows-svg" class="arrows-overlay" oncontextmenu="return false;"></svg>
+
+                            <!-- Đồng hồ của Thầy -->
+                            <div id="coach-bottom-clock-bar" class="player-clock-bar hidden">
+                                <span>👤 Thầy Bình</span>
+                                <span id="coach-bottom-clock" class="clock-time">00:00</span>
+                            </div>
                         </div>
                         <div id="timer-coach">Còn lại: --s</div>
                         
                         <h3 id="panel-title-logs">Nhật ký hệ thống:</h3>
                         <div id="coach-logs" class="log-box"></div>
-                        
-                        <div id="coach-simul-dashboard" class="log-box hidden" style="background:#f4f6f9; border-color:#8e44ad;">
-                            </div>
+                        <div id="coach-simul-dashboard" class="log-box hidden" style="background:#f4f6f9; border-color:#8e44ad;"></div>
                     </div>
                 </div>
             </div>
 
+            <!-- BẢNG VÀNG -->
             <div id="leaderboard-area" class="leaderboard-section hidden">
                 <h3>🏆 BẢNG VÀNG TÍCH LŨY GRAND PRIX 🏆</h3>
                 <table>
@@ -236,10 +286,12 @@
         let myRole = '';
         let myName = '';
         let countdownInterval = null; 
+        let simulClockTickInterval = null; // Vòng lặp đếm giây mượt cho giao diện Simul
         
         const startFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         let localBoardState = {}; 
         let selectedSquare = null;
+        let currentRecordedMove = '';
         let currentSystemMode = 'demo'; 
         let currentTurn = 'w'; 
         
@@ -249,10 +301,10 @@
         let coachHighlights = []; 
         let rightClickStartSquare = null; 
         
-        // BIẾN QUẢN LÝ SIMUL ĐA LUỒNG
         let activeSimulGames = {};
         let currentSimulOpponent = null; 
         let mySimulCoachColor = 'w';
+        let mySimulGameData = null; // Trò lưu lại data game của mình để vẽ đồng hồ
 
         const pieceImages = {
             'P': 'https://upload.wikimedia.org/wikipedia/commons/4/45/Chess_plt45.svg',
@@ -269,46 +321,6 @@
             'k': 'https://upload.wikimedia.org/wikipedia/commons/f/f0/Chess_kdt45.svg'
         };
 
-        function joinRoom(role) {
-            let nameInput = document.getElementById('username').value.trim();
-            if (role === 'student' && !nameInput) {
-                alert("Học trò vui lòng điền tên trước khi vào lớp!");
-                return;
-            }
-            if (role === 'coach') {
-                const pass = prompt("Vui lòng nhập mật khẩu Huấn Luyện Viên:");
-                const coachPasswords = {
-                    "thaybinh": "Thầy Bình",
-                    "codung": "Cô Dung",
-                    "thayhiep": "Thầy Hiệp",
-                    "cothao": "Cô Thảo"
-                };
-                if (!coachPasswords[pass]) {
-                    alert("Sai mật khẩu! Từ chối truy cập.");
-                    return; 
-                }
-                myName = coachPasswords[pass];
-            } else {
-                myName = nameInput;
-            }
-
-            myRole = role;
-            socket.emit('join', { name: myName, role: myRole });
-
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('leaderboard-area').classList.remove('hidden');
-
-            if (role === 'student') {
-                document.getElementById('student-screen').classList.remove('hidden');
-            } else {
-                document.getElementById('coach-screen').classList.remove('hidden');
-                parseAndDrawFEN(startFEN, 'coach-board', true); 
-                saveHistory(); 
-                syncCoachStateToServ();
-            }
-        }
-
-        // ================= HÀM TIỆN ÍCH CORE BÀN CỜ =================
         function generateFENFromCurrentState() {
             const files = ['a','b','c','d','e','f','g','h'];
             let fenRows = [];
@@ -321,9 +333,7 @@
                     if (localBoardState[square]) {
                         if (emptyCount > 0) { rowStr += emptyCount; emptyCount = 0; }
                         rowStr += localBoardState[square];
-                    } else {
-                        emptyCount++;
-                    }
+                    } else emptyCount++;
                 }
                 if (emptyCount > 0) rowStr += emptyCount;
                 fenRows.push(rowStr);
@@ -331,214 +341,29 @@
             return fenRows.join('/') + " " + currentTurn + " KQkq - 0 1";
         }
 
-        function parseAndDrawFEN(fen, boardId, isClickable) {
-            localBoardState = {};
-            const parts = fen.split(' ');
-            const rows = parts[0].split('/');
-            const files = ['a','b','c','d','e','f','g','h'];
-            
-            for (let r = 0; r < 8; r++) {
-                const rank = 8 - r;
-                let fileIdx = 0;
-                const rowStr = rows[r] || "8"; 
-                
-                for (let i = 0; i < rowStr.length; i++) {
-                    const char = rowStr[i];
-                    if (isNaN(char)) {
-                        if (fileIdx < 8) {
-                            localBoardState[files[fileIdx] + rank] = char;
-                            fileIdx++;
-                        }
-                    } else {
-                        fileIdx += parseInt(char);
-                    }
-                }
-            }
-            renderBoardGraphics(boardId, isClickable);
-        }
+        function joinRoom(role) {
+            let nameInput = document.getElementById('username').value.trim();
+            if (role === 'student' && !nameInput) { alert("Học trò vui lòng điền tên trước khi vào lớp!"); return; }
+            if (role === 'coach') {
+                const pass = prompt("Vui lòng nhập mật khẩu Huấn Luyện Viên:");
+                const coachPasswords = { "thaybinh": "Thầy Bình", "codung": "Cô Dung", "thayhiep": "Thầy Hiệp", "cothao": "Cô Thảo" };
+                if (!coachPasswords[pass]) { alert("Sai mật khẩu! Từ chối truy cập."); return; }
+                myName = coachPasswords[pass];
+            } else myName = nameInput;
 
-        function renderBoardGraphics(boardId, isClickable) {
-            const boardDiv = document.getElementById(boardId);
-            if (!boardDiv) return;
-            boardDiv.innerHTML = '';
-            const files = ['a','b','c','d','e','f','g','h'];
-            
-            for (let r = 0; r < 8; r++) {
-                const rank = 8 - r;
-                for (let f = 0; f < 8; f++) {
-                    const square = files[f] + rank;
-                    const squareDiv = document.createElement('div');
-                    
-                    let highlightClass = coachHighlights.includes(square) ? ' highlighted-danger' : '';
-                    squareDiv.className = 'square ' + ((r + f) % 2 === 0 ? 'light' : 'dark') + highlightClass;
-                    squareDiv.dataset.square = square;
-                    squareDiv.dataset.row = r;
-                    squareDiv.dataset.col = f;
-                    
-                    if (localBoardState[square] && pieceImages[localBoardState[square]]) {
-                        const img = document.createElement('img');
-                        img.src = pieceImages[localBoardState[square]];
-                        img.className = 'piece-img';
-                        squareDiv.appendChild(img);
-                    }
-                    
-                    if (isClickable) {
-                        squareDiv.onclick = () => handleSquareInteraction(square, boardId);
-                    }
-                    
-                    // CHỈ CHO PHÉP HLV VẼ MŨI TÊN/ĐÁNH DẤU TRONG CHẾ ĐỘ DEMO
-                    if (boardId === 'coach-board' && currentSystemMode === 'demo') {
-                        squareDiv.onmousedown = (e) => { if (e.button === 2) rightClickStartSquare = square; };
-                        squareDiv.onmouseup = (e) => {
-                            if (e.button === 2 && rightClickStartSquare) {
-                                if (rightClickStartSquare !== square) {
-                                    addCoachArrow(rightClickStartSquare, square);
-                                } else {
-                                    toggleCoachSquareHighlight(square);
-                                }
-                                rightClickStartSquare = null;
-                            }
-                        };
-                    }
-                    boardDiv.appendChild(squareDiv);
-                }
+            myRole = role;
+            socket.emit('join', { name: myName, role: myRole });
+
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('leaderboard-area').classList.remove('hidden');
+
+            if (role === 'student') document.getElementById('student-screen').classList.remove('hidden');
+            else {
+                document.getElementById('coach-screen').classList.remove('hidden');
+                parseAndDrawFEN(startFEN, 'coach-board', true); saveHistory(); syncCoachStateToServ();
             }
         }
 
-        // ================= XỬ LÝ LƯỢT ĐI LUÂN PHIÊN (DEMO & SIMUL) =================
-        function handleSquareInteraction(square, boardId) {
-            // Chặn click học trò nếu không phải lúc Simul hoặc không phải lượt của họ
-            if (boardId === 'student-board') {
-                if (currentSystemMode !== 'simul') return; // Demo và Quiz thì khóa
-                let isMyTurn = (currentTurn === 'w' && mySimulCoachColor === 'b') || (currentTurn === 'b' && mySimulCoachColor === 'w');
-                if (!isMyTurn) return; // Đang đợi HLV đi
-            }
-
-            if (!selectedSquare) {
-                if (localBoardState[square]) {
-                    // Cả HLV và Học trò: Đều bị ràng buộc chỉ được bốc quân đúng màu lượt đi
-                    let isWhitePiece = localBoardState[square] === localBoardState[square].toUpperCase();
-                    if ((currentTurn === 'w' && !isWhitePiece) || (currentTurn === 'b' && isWhitePiece)) return; 
-                    
-                    selectedSquare = square;
-                    document.querySelector(`#${boardId} [data-square="${square}"]`).classList.add('selected');
-                }
-            } else {
-                const fromSquare = selectedSquare;
-                const toSquare = square;
-                
-                document.querySelector(`#${boardId} [data-square="${fromSquare}"]`).classList.remove('selected');
-                selectedSquare = null;
-                
-                if (fromSquare === toSquare) return;
-
-                if (localBoardState[fromSquare]) {
-                    // LOGIC PHONG CẤP
-                    let pChar = localBoardState[fromSquare];
-                    let isPawn = pChar.toLowerCase() === 'p';
-                    let toRank = parseInt(toSquare[1]);
-                    
-                    if (isPawn && ((pChar === 'P' && toRank === 8) || (pChar === 'p' && toRank === 1))) {
-                        let choice = prompt("Phong cấp thành quân gì? (Q=Hậu, R=Xe, B=Tượng, N=Mã):");
-                        if (!choice || !['Q','R','B','N','q','r','b','n'].includes(choice)) choice = 'Q'; 
-                        pChar = (pChar === 'P') ? choice.toUpperCase() : choice.toLowerCase();
-                    }
-
-                    localBoardState[toSquare] = pChar;
-                    delete localBoardState[fromSquare];
-                    
-                    renderBoardGraphics(boardId, true);
-                    const moveStr = `${fromSquare}-${toSquare}`;
-                    currentTurn = currentTurn === 'w' ? 'b' : 'w';
-                    updateTurnBadge();
-                    
-                    if (boardId === 'coach-board') {
-                        if (currentSystemMode === 'demo') {
-                            playedMovesTextList.push(moveStr);
-                            document.getElementById('input-pgn').value = playedMovesTextList.join(' ');
-                            saveHistory();
-                            syncCoachStateToServ();
-                        } else if (currentSystemMode === 'simul') {
-                            // HLV Đi quân trong 1 ván Simul cụ thể
-                            socket.emit('coach_simul_move', {
-                                student: currentSimulOpponent,
-                                boardState: localBoardState,
-                                moveStr: moveStr
-                            });
-                            // Đi xong tự động nhảy sang bàn bé tiếp theo đang chờ
-                            autoSwitchSimulBoard();
-                        }
-                    } else if (boardId === 'student-board' && currentSystemMode === 'simul') {
-                        // Học trò đi quân ném cho thầy
-                        renderBoardGraphics('student-board', false); // Khóa lại chờ thầy
-                        document.getElementById('student-status').innerHTML = `🔄 Em đã đi [<b>${moveStr}</b>]. Đang đợi Thầy đến bàn...`;
-                        socket.emit('student_simul_move', {
-                            boardState: localBoardState,
-                            moveStr: moveStr
-                        });
-                    }
-                }
-            }
-        }
-
-        function updateTurnBadge() {
-            let turnText = currentTurn === 'w' ? "Lượt Trắng" : "Lượt Đen";
-            if (myRole === 'student') {
-                document.getElementById('student-turn-badge').innerText = `Lượt đi: ${turnText}`;
-            } else {
-                document.getElementById('coach-turn-badge').innerText = `Lượt đi: ${turnText}`;
-            }
-        }
-
-        // ================= CÔNG CỤ SVG =================
-        function toggleCoachSquareHighlight(square) {
-            const idx = coachHighlights.indexOf(square);
-            if (idx !== -1) coachHighlights.splice(idx, 1);
-            else coachHighlights.push(square);
-            renderBoardGraphics('coach-board', true);
-            socket.emit('coach_sync_highlights', coachHighlights);
-        }
-
-        function addCoachArrow(from, to) {
-            const index = coachArrows.findIndex(a => a.from === from && a.to === to);
-            if (index !== -1) coachArrows.splice(index, 1);
-            else coachArrows.push({ from, to });
-            drawArrowsOnSvg('coach-arrows-svg', coachArrows);
-            socket.emit('coach_sync_arrows', coachArrows);
-        }
-
-        function clearCoachMarkings() {
-            coachArrows = []; coachHighlights = [];
-            drawArrowsOnSvg('coach-arrows-svg', coachArrows);
-            renderBoardGraphics('coach-board', true);
-            socket.emit('coach_sync_arrows', coachArrows);
-            socket.emit('coach_sync_highlights', coachHighlights);
-        }
-
-        function drawArrowsOnSvg(svgId, arrowsList) {
-            const svg = document.getElementById(svgId);
-            if (!svg) return;
-            svg.innerHTML = ''; 
-            if (arrowsList.length > 0) {
-                svg.innerHTML += `<defs><marker id="arrow-head" markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto"><path d="M0,0 L0,6 L5,3 Z" fill="rgba(22, 160, 133, 0.75)" /></marker></defs>`;
-            }
-            arrowsList.forEach(arrow => {
-                const fromEl = document.querySelector(`#${svgId.replace('-arrows-svg', '-board')} [data-square="${arrow.from}"]`);
-                const toEl = document.querySelector(`#${svgId.replace('-arrows-svg', '-board')} [data-square="${arrow.to}"]`);
-                if (fromEl && toEl) {
-                    let fRow = parseInt(fromEl.dataset.row), fCol = parseInt(fromEl.dataset.col);
-                    let tRow = parseInt(toEl.dataset.row), tCol = parseInt(toEl.dataset.col);
-                    let x1 = (fCol + 0.5) * 12.5, y1 = (fRow + 0.5) * 12.5;
-                    let x2 = (tCol + 0.5) * 12.5, y2 = (tRow + 0.5) * 12.5;
-                    let dx = x2 - x1, dy = y2 - y1;
-                    let len = Math.sqrt(dx*dx + dy*dy);
-                    if (len > 0) { x2 = x1 + (dx / len) * (len - 4); y2 = y1 + (dy / len) * (len - 4); }
-                    svg.innerHTML += `<line x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%" stroke="rgba(22, 160, 133, 0.75)" stroke-width="8" marker-end="url(#arrow-head)" />`;
-                }
-            });
-        }
-
-        // ================= CÔNG CỤ DEMO =================
         function saveHistory() { boardHistory.push({ board: JSON.parse(JSON.stringify(localBoardState)), turn: currentTurn }); }
         function syncCoachStateToServ() { socket.emit('coach_demo_move', { boardState: localBoardState, currentTurn: currentTurn }); }
         function undoCoachMove() {
@@ -552,6 +377,7 @@
                 renderBoardGraphics('coach-board', true); updateTurnBadge(); syncCoachStateToServ();
             }
         }
+
         function handleBoardSetupModeChange() {
             const mode = document.getElementById('board-setup-mode').value;
             if (mode === 'starting') {
@@ -565,15 +391,195 @@
                 parseAndDrawFEN(fen, 'coach-board', true); saveHistory(); updateTurnBadge();
             }
         }
-        function toggleCoachInputs() {
-            const type = document.getElementById('input-type').value;
-            if (type === 'quiz') { document.getElementById('area-quiz-inputs').classList.remove('hidden'); document.getElementById('area-move-inputs').classList.add('hidden'); }
-            else { document.getElementById('area-quiz-inputs').classList.add('hidden'); document.getElementById('area-move-inputs').classList.remove('hidden'); }
+
+        function parseAndDrawFEN(fen, boardId, isClickable) {
+            localBoardState = {};
+            const parts = fen.split(' ');
+            const rows = parts[0].split('/');
+            const files = ['a','b','c','d','e','f','g','h'];
+            for (let r = 0; r < 8; r++) {
+                const rank = 8 - r; let fileIdx = 0; const rowStr = rows[r] || "8"; 
+                for (let i = 0; i < rowStr.length; i++) {
+                    const char = rowStr[i];
+                    if (isNaN(char)) {
+                        if (fileIdx < 8) { localBoardState[files[fileIdx] + rank] = char; fileIdx++; }
+                    } else fileIdx += parseInt(char);
+                }
+            }
+            renderBoardGraphics(boardId, isClickable);
         }
 
-        // ================= TÍNH NĂNG MỚI: ĐIỀU PHỐI ĐẤU SIMUL =================
+        // ================= XÁC ĐỊNH GÓC NHÌN BÀN CỜ & VẼ BÀN CỜ =================
+        function renderBoardGraphics(boardId, isClickable) {
+            const boardDiv = document.getElementById(boardId);
+            if (!boardDiv) return;
+            boardDiv.innerHTML = '';
+            const files = ['a','b','c','d','e','f','g','h'];
+            
+            // XÁC ĐỊNH CHIỀU XOAY CỦA BÀN CỜ (FLIP BOARD)
+            let orientation = 'w';
+            if (currentSystemMode === 'simul') {
+                if (myRole === 'student') {
+                    // Trò cầm màu ngược lại với Thầy
+                    orientation = (mySimulCoachColor === 'w') ? 'b' : 'w';
+                } else if (myRole === 'coach') {
+                    orientation = mySimulCoachColor;
+                }
+            }
+
+            for (let r = 0; r < 8; r++) {
+                // Đảo ngược vị trí render nếu orientation là 'b'
+                const rank = (orientation === 'w') ? 8 - r : r + 1;
+                for (let f = 0; f < 8; f++) {
+                    const file = (orientation === 'w') ? files[f] : files[7 - f];
+                    const square = file + rank;
+                    
+                    const squareDiv = document.createElement('div');
+                    let highlightClass = coachHighlights.includes(square) ? ' highlighted-danger' : '';
+                    squareDiv.className = 'square ' + ((r + f) % 2 === 0 ? 'light' : 'dark') + highlightClass;
+                    squareDiv.dataset.square = square;
+                    squareDiv.dataset.row = r; // Row gốc cho SVG vẫn giữ
+                    squareDiv.dataset.col = f; // Col gốc cho SVG vẫn giữ
+                    
+                    if (localBoardState[square] && pieceImages[localBoardState[square]]) {
+                        const img = document.createElement('img');
+                        img.src = pieceImages[localBoardState[square]];
+                        img.className = 'piece-img';
+                        squareDiv.appendChild(img);
+                    }
+                    
+                    if (isClickable) squareDiv.onclick = () => handleSquareInteraction(square, boardId);
+                    
+                    if (boardId === 'coach-board' && currentSystemMode === 'demo') {
+                        squareDiv.onmousedown = (e) => { if (e.button === 2) rightClickStartSquare = square; };
+                        squareDiv.onmouseup = (e) => {
+                            if (e.button === 2 && rightClickStartSquare) {
+                                if (rightClickStartSquare !== square) addCoachArrow(rightClickStartSquare, square);
+                                else toggleCoachSquareHighlight(square);
+                                rightClickStartSquare = null;
+                            }
+                        };
+                    }
+                    boardDiv.appendChild(squareDiv);
+                }
+            }
+        }
+
+        function handleSquareInteraction(square, boardId) {
+            if (boardId === 'student-board') {
+                if (currentSystemMode !== 'simul') return; 
+                let isMyTurn = (currentTurn === 'w' && mySimulCoachColor === 'b') || (currentTurn === 'b' && mySimulCoachColor === 'w');
+                if (!isMyTurn) return; 
+            }
+
+            if (!selectedSquare) {
+                if (localBoardState[square]) {
+                    let isWhitePiece = localBoardState[square] === localBoardState[square].toUpperCase();
+                    if ((currentTurn === 'w' && !isWhitePiece) || (currentTurn === 'b' && isWhitePiece)) return; 
+                    
+                    selectedSquare = square;
+                    document.querySelector(`#${boardId} [data-square="${square}"]`).classList.add('selected');
+                }
+            } else {
+                const fromSquare = selectedSquare;
+                const toSquare = square;
+                document.querySelector(`#${boardId} [data-square="${fromSquare}"]`).classList.remove('selected');
+                selectedSquare = null;
+                if (fromSquare === toSquare) return;
+
+                if (localBoardState[fromSquare]) {
+                    let pChar = localBoardState[fromSquare];
+                    let isPawn = pChar.toLowerCase() === 'p';
+                    let toRank = parseInt(toSquare[1]);
+                    
+                    if (isPawn && ((pChar === 'P' && toRank === 8) || (pChar === 'p' && toRank === 1))) {
+                        let choice = prompt("Phong cấp thành quân gì? (Q=Hậu, R=Xe, B=Tượng, N=Mã):");
+                        if (!choice || !['Q','R','B','N','q','r','b','n'].includes(choice)) choice = 'Q'; 
+                        pChar = (pChar === 'P') ? choice.toUpperCase() : choice.toLowerCase();
+                    }
+
+                    localBoardState[toSquare] = pChar; delete localBoardState[fromSquare];
+                    renderBoardGraphics(boardId, true);
+                    const moveStr = `${fromSquare}-${toSquare}`;
+                    currentTurn = currentTurn === 'w' ? 'b' : 'w';
+                    updateTurnBadge();
+                    
+                    if (boardId === 'coach-board') {
+                        if (currentSystemMode === 'demo') {
+                            playedMovesTextList.push(moveStr);
+                            document.getElementById('input-pgn').value = playedMovesTextList.join(' ');
+                            saveHistory(); syncCoachStateToServ();
+                        } else if (currentSystemMode === 'simul') {
+                            socket.emit('coach_simul_move', { student: currentSimulOpponent, boardState: localBoardState, moveStr: moveStr });
+                            autoSwitchSimulBoard();
+                        }
+                    } else if (boardId === 'student-board' && currentSystemMode === 'simul') {
+                        renderBoardGraphics('student-board', false); 
+                        document.getElementById('student-status').innerHTML = `🔄 Em đã đi [<b>${moveStr}</b>]. Đang đợi Thầy đến bàn...`;
+                        socket.emit('student_simul_move', { boardState: localBoardState, moveStr: moveStr });
+                    }
+                }
+            }
+        }
+
+        function updateTurnBadge() {
+            let turnText = currentTurn === 'w' ? "Lượt Trắng" : "Lượt Đen";
+            if (myRole === 'student') document.getElementById('student-turn-badge').innerText = `Lượt đi: ${turnText}`;
+            else document.getElementById('coach-turn-badge').innerText = `Lượt đi: ${turnText}`;
+        }
+
+        function toggleCoachSquareHighlight(square) {
+            const idx = coachHighlights.indexOf(square);
+            if (idx !== -1) coachHighlights.splice(idx, 1);
+            else coachHighlights.push(square);
+            renderBoardGraphics('coach-board', true); socket.emit('coach_sync_highlights', coachHighlights);
+        }
+
+        function addCoachArrow(from, to) {
+            const index = coachArrows.findIndex(a => a.from === from && a.to === to);
+            if (index !== -1) coachArrows.splice(index, 1);
+            else coachArrows.push({ from, to });
+            drawArrowsOnSvg('coach-arrows-svg', coachArrows); socket.emit('coach_sync_arrows', coachArrows);
+        }
+
+        function clearCoachMarkings() {
+            coachArrows = []; coachHighlights = [];
+            drawArrowsOnSvg('coach-arrows-svg', coachArrows); renderBoardGraphics('coach-board', true);
+            socket.emit('coach_sync_arrows', coachArrows); socket.emit('coach_sync_highlights', coachHighlights);
+        }
+
+        function drawArrowsOnSvg(svgId, arrowsList) {
+            const svg = document.getElementById(svgId); if (!svg) return;
+            svg.innerHTML = ''; 
+            if (arrowsList.length > 0) {
+                svg.innerHTML += `<defs><marker id="arrow-head" markerWidth="6" markerHeight="6" refX="4" refY="3" orient="auto"><path d="M0,0 L0,6 L5,3 Z" fill="rgba(22, 160, 133, 0.75)" /></marker></defs>`;
+            }
+            // SVG vẽ cố định theo tọa độ r, c tĩnh để lật bàn cờ mũi tên vẫn trỏ đúng
+            let orientation = 'w';
+            if (currentSystemMode === 'simul') {
+                if (myRole === 'student') orientation = (mySimulCoachColor === 'w') ? 'b' : 'w';
+                else if (myRole === 'coach') orientation = mySimulCoachColor;
+            }
+
+            arrowsList.forEach(arrow => {
+                const fromEl = document.querySelector(`#${svgId.replace('-arrows-svg', '-board')} [data-square="${arrow.from}"]`);
+                const toEl = document.querySelector(`#${svgId.replace('-arrows-svg', '-board')} [data-square="${arrow.to}"]`);
+                if (fromEl && toEl) {
+                    let fRow = parseInt(fromEl.dataset.row), fCol = parseInt(fromEl.dataset.col);
+                    let tRow = parseInt(toEl.dataset.row), tCol = parseInt(toEl.dataset.col);
+                    
+                    let x1 = (fCol + 0.5) * 12.5, y1 = (fRow + 0.5) * 12.5;
+                    let x2 = (tCol + 0.5) * 12.5, y2 = (tRow + 0.5) * 12.5;
+                    let dx = x2 - x1, dy = y2 - y1;
+                    let len = Math.sqrt(dx*dx + dy*dy);
+                    if (len > 0) { x2 = x1 + (dx / len) * (len - 4); y2 = y1 + (dy / len) * (len - 4); }
+                    svg.innerHTML += `<line x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%" stroke="rgba(22, 160, 133, 0.75)" stroke-width="8" marker-end="url(#arrow-head)" />`;
+                }
+            });
+        }
+
+        // ================= KHỞI TẠO ĐẤU ĐỒNG LOẠT (SIMUL) =================
         function startSimulMode() {
-            // Khóa giao diện chuyển sang Simul Command Center
             document.getElementById('coach-demo-tools').classList.add('hidden');
             document.getElementById('coach-stop-tools').classList.remove('hidden');
             document.getElementById('btn-stop-simul').classList.remove('hidden');
@@ -587,15 +593,29 @@
             document.getElementById('coach-mode-badge').style.background = "#f5eef8";
             document.getElementById('coach-mode-badge').style.color = "#8e44ad";
             
+            document.getElementById('timer-coach').classList.add('hidden');
+            document.getElementById('coach-top-clock-bar').classList.remove('hidden');
+            document.getElementById('coach-bottom-clock-bar').classList.remove('hidden');
+            
             clearCoachMarkings();
+            
+            mySimulCoachColor = document.getElementById('simul-coach-color').value;
+            let mins = document.getElementById('simul-minutes').value;
+            let incs = document.getElementById('simul-increment').value;
             
             socket.emit('start_simul', {
                 boardState: localBoardState,
-                currentTurn: currentTurn
+                currentTurn: currentTurn,
+                coachColor: mySimulCoachColor,
+                minutes: mins,
+                increment: incs
             });
+            
+            // Khởi động vòng lặp đồng hồ
+            if(simulClockTickInterval) clearInterval(simulClockTickInterval);
+            simulClockTickInterval = setInterval(updateSimulClockVisuals, 200);
         }
 
-        // Load bàn cờ của 1 bé cụ thể lên màn hình Thầy
         function loadSimulGameOnCoachBoard(studentName) {
             currentSimulOpponent = studentName;
             document.getElementById('current-simul-opponent-name').innerText = studentName;
@@ -604,8 +624,6 @@
             if (game) {
                 localBoardState = game.boardState;
                 currentTurn = game.turn;
-                
-                // Cập nhật lại UI List
                 document.querySelectorAll('.simul-item').forEach(el => el.classList.remove('active'));
                 let btn = document.getElementById('simul-btn-' + studentName);
                 if (btn) btn.classList.add('active');
@@ -615,19 +633,12 @@
             }
         }
 
-        // Tìm bé tiếp theo đang có màu xanh (đợi thầy đi) để nhảy sang
         function autoSwitchSimulBoard() {
             for (let studentName in activeSimulGames) {
                 let game = activeSimulGames[studentName];
-                if (game.turn === game.coachColor) {
-                    loadSimulGameOnCoachBoard(studentName);
-                    return;
-                }
+                if (game.turn === game.coachColor) { loadSimulGameOnCoachBoard(studentName); return; }
             }
-            // Nếu không có ai đợi, load tạm người đầu tiên
-            if(Object.keys(activeSimulGames).length > 0) {
-                loadSimulGameOnCoachBoard(Object.keys(activeSimulGames)[0]);
-            }
+            if(Object.keys(activeSimulGames).length > 0) loadSimulGameOnCoachBoard(Object.keys(activeSimulGames)[0]);
         }
 
         function renderCoachSimulDashboard(simulGames) {
@@ -640,75 +651,115 @@
                 let isCoachTurn = game.turn === game.coachColor;
                 
                 let indicator = isCoachTurn ? '<span class="simul-indicator-green"></span>' : '<span class="simul-indicator-wait"></span>';
-                let statusText = isCoachTurn ? '🟢 Tới lượt Thầy' : '⏳ Đang suy nghĩ...';
+                let statusText = isCoachTurn ? '🟢 Đến lượt Thầy' : '⏳ Đang nghĩ...';
                 let activeClass = (studentName === currentSimulOpponent) ? 'active' : '';
                 
-                dash.innerHTML += `
-                    <div id="simul-btn-${studentName}" class="simul-item ${activeClass}" onclick="loadSimulGameOnCoachBoard('${studentName}')">
-                        <div style="font-weight:bold; color:#2c3e50;">👤 ${studentName}</div>
-                        <div style="font-size:12px; color:#7f8c8d; display:flex; align-items:center; gap:5px;">
-                            ${indicator} ${statusText}
-                        </div>
-                    </div>
-                `;
+                dash.innerHTML += `<div id="simul-btn-${studentName}" class="simul-item ${activeClass}" onclick="loadSimulGameOnCoachBoard('${studentName}')"><div style="font-weight:bold; color:#2c3e50;">👤 ${studentName}</div><div style="font-size:12px; color:#7f8c8d; display:flex; align-items:center; gap:5px;">${indicator} ${statusText}</div></div>`;
             }
+            if (!currentSimulOpponent && Object.keys(simulGames).length > 0) autoSwitchSimulBoard();
+        }
+
+        // ================= HIỂN THỊ ĐỒNG HỒ CỜ THỜI GIAN THỰC =================
+        function formatTimeMs(ms) {
+            if(ms <= 0) return "00:00";
+            let totalSeconds = Math.floor(ms / 1000);
+            let m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            let s = (totalSeconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function updateSimulClockVisuals() {
+            if (currentSystemMode !== 'simul') return;
             
-            if (!currentSimulOpponent && Object.keys(simulGames).length > 0) {
-                autoSwitchSimulBoard();
+            let game = null;
+            if (myRole === 'student') game = mySimulGameData;
+            else if (myRole === 'coach' && currentSimulOpponent) game = activeSimulGames[currentSimulOpponent];
+            if (!game) return;
+
+            let now = Date.now();
+            let wTime = game.wTime;
+            let bTime = game.bTime;
+
+            if (game.status === 'playing') {
+                let elapsed = now - game.lastMoveTimestamp;
+                if (game.turn === 'w') wTime -= elapsed;
+                else bTime -= elapsed;
+            }
+
+            if (myRole === 'student') {
+                let myColor = (mySimulCoachColor === 'w') ? 'b' : 'w';
+                let coachT = (mySimulCoachColor === 'w') ? wTime : bTime;
+                let myT = (myColor === 'w') ? wTime : bTime;
+                
+                document.getElementById('student-top-clock').innerText = formatTimeMs(coachT);
+                document.getElementById('student-bottom-clock').innerText = formatTimeMs(myT);
+                
+                if(game.turn === mySimulCoachColor) {
+                    document.getElementById('student-top-clock').classList.add('clock-active');
+                    document.getElementById('student-bottom-clock').classList.remove('clock-active');
+                } else {
+                    document.getElementById('student-top-clock').classList.remove('clock-active');
+                    document.getElementById('student-bottom-clock').classList.add('clock-active');
+                }
+            } else if (myRole === 'coach') {
+                let studentColor = (mySimulCoachColor === 'w') ? 'b' : 'w';
+                let coachT = (mySimulCoachColor === 'w') ? wTime : bTime;
+                let studT = (studentColor === 'w') ? wTime : bTime;
+                
+                document.getElementById('coach-top-clock').innerText = formatTimeMs(studT);
+                document.getElementById('coach-bottom-clock').innerText = formatTimeMs(coachT);
+                
+                if(game.turn === studentColor) {
+                    document.getElementById('coach-top-clock').classList.add('clock-active');
+                    document.getElementById('coach-bottom-clock').classList.remove('clock-active');
+                } else {
+                    document.getElementById('coach-top-clock').classList.remove('clock-active');
+                    document.getElementById('coach-bottom-clock').classList.add('clock-active');
+                }
             }
         }
 
-        // ================= ĐỒNG BỘ EVENT TỪ SERVER =================
+        // ================= LẮNG NGHE KẾT NỐI TỪ SERVER =================
         socket.on('init_game_state', (gameState) => {
             currentSystemMode = gameState.mode;
             if (myRole === 'student') {
                 if (gameState.mode === 'demo') {
                     currentTurn = gameState.currentTurn;
-                    if(gameState.boardState) { localBoardState = gameState.boardState; renderBoardGraphics('student-board', false); } 
-                    else { parseAndDrawFEN(startFEN, 'student-board', false); }
+                    if(gameState.boardState) { localBoardState = gameState.boardState; renderBoardGraphics('student-board', false); } else { parseAndDrawFEN(startFEN, 'student-board', false); }
                     if(gameState.arrows) drawArrowsOnSvg('student-arrows-svg', gameState.arrows);
                     if(gameState.highlights) { coachHighlights = gameState.highlights; renderBoardGraphics('student-board', false); }
                     setStudentDemoUIMode();
-                } else if (gameState.mode === 'quiz' && gameState.timeLeft > 0) {
-                    launchQuizInterface(gameState.currentQuiz, gameState.timeLeft);
-                } else if (gameState.mode === 'simul') {
-                    launchStudentSimulMode(gameState.mySimulGame);
-                }
+                } else if (gameState.mode === 'quiz' && gameState.timeLeft > 0) launchQuizInterface(gameState.currentQuiz, gameState.timeLeft);
+                else if (gameState.mode === 'simul') launchStudentSimulMode(gameState.mySimulGame);
             } else {
                 if (gameState.mode === 'quiz') {
-                    // Coach refresh during quiz
-                    document.getElementById('coach-demo-tools').classList.add('hidden'); document.getElementById('coach-stop-tools').classList.remove('hidden'); document.getElementById('btn-stop-quiz').classList.remove('hidden');
+                    currentSystemMode = 'quiz'; document.getElementById('coach-demo-tools').classList.add('hidden'); document.getElementById('coach-stop-tools').classList.remove('hidden'); document.getElementById('btn-stop-quiz').classList.remove('hidden');
                 } else if (gameState.mode === 'simul') {
-                    // Coach refresh during simul
-                    startSimulMode();
-                    renderCoachSimulDashboard(gameState.simulGames);
+                    startSimulMode(); renderCoachSimulDashboard(gameState.simulGames);
                 }
             }
         });
 
-        // Event: Học trò nhận thông báo lớp vào chế độ Simul
         socket.on('simul_started', (simulGames) => {
             currentSystemMode = 'simul';
             if (myRole === 'student') {
-                if(simulGames[myName]) {
-                    launchStudentSimulMode(simulGames[myName]);
-                } else {
-                    document.getElementById('student-status').innerHTML = "🛑 Bạn vắng mặt lúc Thầy phát động giải. Vui lòng làm khán giả xem các bạn khác đấu.";
-                }
-            } else if (myRole === 'coach') {
-                renderCoachSimulDashboard(simulGames);
-            }
+                if(simulGames[myName]) launchStudentSimulMode(simulGames[myName]);
+                else document.getElementById('student-status').innerHTML = "🛑 Em vắng mặt lúc phát động giải. Vui lòng làm khán giả xem các bạn khác đấu.";
+            } else if (myRole === 'coach') renderCoachSimulDashboard(simulGames);
         });
 
         function launchStudentSimulMode(myGameData) {
             if(!myGameData) return;
+            mySimulGameData = myGameData;
             document.getElementById('student-arrows-svg').innerHTML = ''; 
             document.getElementById('student-mode-badge').innerText = "⚔️ Chế độ: ĐANG ĐẤU CỜ VỚI THẦY";
-            document.getElementById('student-mode-badge').style.background = "#f5eef8";
-            document.getElementById('student-mode-badge').style.color = "#8e44ad";
+            document.getElementById('student-mode-badge').style.background = "#f5eef8"; document.getElementById('student-mode-badge').style.color = "#8e44ad";
             
-            document.getElementById('answers-area').classList.add('hidden');
-            document.getElementById('student-text-answer-area').classList.add('hidden');
+            document.getElementById('timer').classList.add('hidden');
+            document.getElementById('student-top-clock-bar').classList.remove('hidden');
+            document.getElementById('student-bottom-clock-bar').classList.remove('hidden');
+            
+            document.getElementById('answers-area').classList.add('hidden'); document.getElementById('student-text-answer-area').classList.add('hidden');
             document.getElementById('student-simul-title').classList.remove('hidden');
             
             mySimulCoachColor = myGameData.coachColor;
@@ -717,171 +768,74 @@
             updateTurnBadge();
             
             let isMyTurn = (currentTurn === 'w' && mySimulCoachColor === 'b') || (currentTurn === 'b' && mySimulCoachColor === 'w');
+            renderBoardGraphics('student-board', isMyTurn); // LẬT BÀN CỜ ĐƯỢC KÍCH HOẠT TẠI ĐÂY
             
-            renderBoardGraphics('student-board', isMyTurn); // Mở hoặc khóa dựa trên lượt đi
+            if (isMyTurn) document.getElementById('student-status').innerHTML = "🟢 Tới lượt em! Hãy bốc cờ để tấn công...";
+            else document.getElementById('student-status').innerHTML = "⏳ Đang đợi Thầy Bình qua bàn đi quân...";
             
-            if (isMyTurn) {
-                document.getElementById('student-status').innerHTML = "🟢 Tới lượt em! Hãy bốc cờ để tấn công...";
-            } else {
-                document.getElementById('student-status').innerHTML = "⏳ Đang đợi Thầy Bình qua bàn đi quân...";
-            }
+            if(simulClockTickInterval) clearInterval(simulClockTickInterval);
+            simulClockTickInterval = setInterval(updateSimulClockVisuals, 200);
         }
 
-        // Cập nhật trạng thái từng nước đi trong Simul
         socket.on('simul_update_coach_dashboard', (simulGames) => {
             if (myRole === 'coach') {
                 renderCoachSimulDashboard(simulGames);
-                // Nếu bàn đang mở mà thầy vừa đi xong, tự động nhảy
-                if (currentSimulOpponent && simulGames[currentSimulOpponent].turn !== simulGames[currentSimulOpponent].coachColor) {
-                    autoSwitchSimulBoard();
-                }
+                if (currentSimulOpponent && simulGames[currentSimulOpponent].turn !== simulGames[currentSimulOpponent].coachColor) autoSwitchSimulBoard();
             }
         });
 
-        socket.on('simul_update_student', (data) => {
+        socket.on('simul_update_game', (data) => {
             if (myRole === 'student' && myName === data.student) {
+                mySimulGameData = data.game;
                 launchStudentSimulMode(data.game);
+            } else if (myRole === 'coach' && currentSimulOpponent === data.student) {
+                activeSimulGames[data.student] = data.game;
+                loadSimulGameOnCoachBoard(data.student);
             }
         });
 
-
-        socket.on('sync_demo_board', (data) => {
-            if (myRole === 'student' && currentSystemMode === 'demo') {
-                localBoardState = data.boardState; currentTurn = data.currentTurn; updateTurnBadge(); renderBoardGraphics('student-board', false); 
-            }
-        });
+        socket.on('sync_demo_board', (data) => { if (myRole === 'student' && currentSystemMode === 'demo') { localBoardState = data.boardState; currentTurn = data.currentTurn; updateTurnBadge(); renderBoardGraphics('student-board', false); } });
         socket.on('update_student_arrows', (arrows) => { if (myRole === 'student' && currentSystemMode === 'demo') drawArrowsOnSvg('student-arrows-svg', arrows); });
         socket.on('update_student_highlights', (hl) => { if (myRole === 'student' && currentSystemMode === 'demo') { coachHighlights = hl; renderBoardGraphics('student-board', false); }});
 
-
-        // HLV GỬI & DỪNG KIỂM TRA / SIMUL
         function sendQuestion() {
-            document.getElementById('coach-demo-tools').classList.add('hidden');
-            document.getElementById('coach-stop-tools').classList.remove('hidden');
-            document.getElementById('btn-stop-quiz').classList.remove('hidden');
-            
-            const type = document.getElementById('input-type').value;
-            const setupMode = document.getElementById('board-setup-mode').value;
+            document.getElementById('coach-demo-tools').classList.add('hidden'); document.getElementById('coach-stop-tools').classList.remove('hidden'); document.getElementById('btn-stop-quiz').classList.remove('hidden');
+            const type = document.getElementById('input-type').value; const setupMode = document.getElementById('board-setup-mode').value;
             let finalFen = (setupMode === 'starting') ? generateFENFromCurrentState() : (document.getElementById('input-fen').value.trim() || startFEN);
             let correctAnswer = document.getElementById(type === 'quiz' ? 'input-correct-quiz' : 'input-correct-move').value.trim();
-
-            if (!correctAnswer) { alert("Vui lòng gõ câu trả lời chính xác vào ô trống!"); return; }
-
-            socket.emit('send_question', {
-                type: type, fen: finalFen,
-                a: document.getElementById('input-a').value, b: document.getElementById('input-b').value,
-                c: document.getElementById('input-c').value, d: document.getElementById('input-d').value,
-                correctAnswer: correctAnswer, seconds: document.getElementById('input-seconds').value
-            });
-            
-            currentSystemMode = 'quiz';
-            document.getElementById('coach-mode-badge').innerText = "📝 TRẠNG THÁI: ĐANG TRONG GIỜ LÀM BÀI";
-            document.getElementById('coach-mode-badge').style.background = "#fdf2e9";
-            document.getElementById('coach-mode-badge').style.color = "#e67e22";
+            if (!correctAnswer) { alert("Vui lòng gõ đáp án chuẩn vào ô trống!"); return; }
+            socket.emit('send_question', { type: type, fen: finalFen, a: document.getElementById('input-a').value, b: document.getElementById('input-b').value, c: document.getElementById('input-c').value, d: document.getElementById('input-d').value, correctAnswer: correctAnswer, seconds: document.getElementById('input-seconds').value });
         }
 
-        function stopModesAndBackToDemo() {
-            socket.emit('stop_quiz_mode'); // Dùng chung cho cả tắt quiz và tắt Simul
-        }
-
-        socket.on('new_question', (data) => {
-            launchQuizInterface(data, data.seconds);
-        });
+        function stopModesAndBackToDemo() { socket.emit('stop_quiz_mode'); }
+        socket.on('new_question', (data) => { launchQuizInterface(data, data.seconds); });
 
         socket.on('switch_to_demo_mode', (data) => {
-            if (countdownInterval) clearInterval(countdownInterval); 
+            if (countdownInterval) clearInterval(countdownInterval); if(simulClockTickInterval) clearInterval(simulClockTickInterval);
             currentSystemMode = 'demo'; selectedSquare = null; currentRecordedMove = '';
-
+            
             if (myRole === 'student') {
                 setStudentDemoUIMode();
-                if (data.boardState) {
-                    localBoardState = data.boardState; currentTurn = data.currentTurn; updateTurnBadge();
-                    coachHighlights = data.highlights || []; renderBoardGraphics('student-board', false);
-                }
+                if (data.boardState) { localBoardState = data.boardState; currentTurn = data.currentTurn; updateTurnBadge(); coachHighlights = data.highlights || []; renderBoardGraphics('student-board', false); }
                 drawArrowsOnSvg('student-arrows-svg', data.arrows || []);
             } else {
-                // Phục hồi UI Thầy
-                document.getElementById('coach-mode-badge').innerText = "📺 TRẠNG THÁI: ĐANG TRÌNH DIỄN BÀI GIẢNG";
-                document.getElementById('coach-mode-badge').style.background = "#e8f8f5"; document.getElementById('coach-mode-badge').style.color = "#27ae60";
-                
-                document.getElementById('coach-demo-tools').classList.remove('hidden');
-                document.getElementById('coach-stop-tools').classList.add('hidden');
-                document.getElementById('btn-stop-quiz').classList.add('hidden');
-                document.getElementById('btn-stop-simul').classList.add('hidden');
-                
-                document.getElementById('panel-title-logs').innerText = "Nhật ký hệ thống:";
-                document.getElementById('coach-logs').classList.remove('hidden');
-                document.getElementById('coach-simul-dashboard').classList.add('hidden');
-                document.getElementById('coach-simul-header').classList.add('hidden');
+                document.getElementById('coach-mode-badge').innerText = "📺 TRẠNG THÁI: ĐANG TRÌNH DIỄN BÀI GIẢNG"; document.getElementById('coach-mode-badge').style.background = "#e8f8f5"; document.getElementById('coach-mode-badge').style.color = "#27ae60";
+                document.getElementById('coach-demo-tools').classList.remove('hidden'); document.getElementById('coach-stop-tools').classList.add('hidden'); document.getElementById('btn-stop-quiz').classList.add('hidden'); document.getElementById('btn-stop-simul').classList.add('hidden');
+                document.getElementById('timer-coach').classList.remove('hidden'); document.getElementById('coach-top-clock-bar').classList.add('hidden'); document.getElementById('coach-bottom-clock-bar').classList.add('hidden');
+                document.getElementById('panel-title-logs').innerText = "Nhật ký hệ thống:"; document.getElementById('coach-logs').classList.remove('hidden'); document.getElementById('coach-simul-dashboard').classList.add('hidden'); document.getElementById('coach-simul-header').classList.add('hidden');
                 currentSimulOpponent = null;
-                
                 const setupMode = document.getElementById('board-setup-mode').value;
-                if (setupMode === 'starting') { renderBoardGraphics('coach-board', true); } 
-                else { let fen = document.getElementById('input-fen').value.trim() || startFEN; parseAndDrawFEN(fen, 'coach-board', true); }
+                if (setupMode === 'starting') renderBoardGraphics('coach-board', true); else { let fen = document.getElementById('input-fen').value.trim() || startFEN; parseAndDrawFEN(fen, 'coach-board', true); }
                 drawArrowsOnSvg('coach-arrows-svg', coachArrows);
             }
         });
 
         function setStudentDemoUIMode() {
-            document.getElementById('student-mode-badge').innerText = "📺 Chế độ: Thầy giảng bài (Khóa bàn cờ)";
-            document.getElementById('student-mode-badge').style.background = "#e8f4f8"; document.getElementById('student-mode-badge').style.color = "#2980b9";
-            document.getElementById('answers-area').classList.add('hidden'); document.getElementById('student-text-answer-area').classList.add('hidden');
-            document.getElementById('student-simul-title').classList.add('hidden');
-            document.getElementById('student-status').innerText = "Đang đồng bộ bàn cờ trực tiếp với bài giảng của Thầy...";
-            document.getElementById('timer').innerText = "00:00";
+            document.getElementById('student-mode-badge').innerText = "📺 Chế độ: Thầy giảng bài (Khóa bàn cờ)"; document.getElementById('student-mode-badge').style.background = "#e8f4f8"; document.getElementById('student-mode-badge').style.color = "#2980b9";
+            document.getElementById('answers-area').classList.add('hidden'); document.getElementById('student-text-answer-area').classList.add('hidden'); document.getElementById('student-simul-title').classList.add('hidden');
+            document.getElementById('timer').classList.remove('hidden'); document.getElementById('student-top-clock-bar').classList.add('hidden'); document.getElementById('student-bottom-clock-bar').classList.add('hidden');
+            document.getElementById('student-status').innerText = "Đang đồng bộ bàn cờ trực tiếp với bài giảng của Thầy..."; document.getElementById('timer').innerText = "00:00";
         }
-
-        // HÀM CHUNG CHO QUIZ
-        function launchQuizInterface(data, secondsLeft) {
-            if (countdownInterval) clearInterval(countdownInterval); 
-            let timeLeft = secondsLeft; currentSystemMode = 'quiz';
-
-            if (myRole === 'student') {
-                document.getElementById('student-arrows-svg').innerHTML = ''; document.getElementById('student-typed-input').value = ''; 
-                document.getElementById('student-simul-title').classList.add('hidden');
-                document.getElementById('student-mode-badge').innerText = "📝 Chế độ: ĐANG LÀM BÀI KIỂM TRA";
-                document.getElementById('student-mode-badge').style.background = "#fffdf0"; document.getElementById('student-mode-badge').style.color = "#e67e22";
-
-                if (data.type === 'quiz') {
-                    parseAndDrawFEN(data.fen, 'student-board', false); document.getElementById('text-a').innerText = data.a; document.getElementById('text-b').innerText = data.b; document.getElementById('text-c').innerText = data.c; document.getElementById('text-d').innerText = data.d;
-                    document.getElementById('answers-area').classList.remove('hidden'); document.getElementById('student-text-answer-area').classList.add('hidden');
-                    document.getElementById('student-status').innerText = "Thầy ra đề TRẮC NGHIỆM! Hãy chọn đáp án đúng:";
-                } else {
-                    parseAndDrawFEN(data.fen, 'student-board', false); document.getElementById('answers-area').classList.add('hidden'); document.getElementById('student-text-answer-area').classList.remove('hidden'); 
-                    document.getElementById('student-status').innerText = "Thầy ra đề TỰ LUẬN! Hãy nhìn bàn cờ và gõ câu trả lời của em vào ô dưới đây:";
-                }
-            }
-
-            countdownInterval = setInterval(() => {
-                let displayStr = `Còn lại: ${timeLeft} Giây`;
-                if (myRole === 'student') document.getElementById('timer').innerText = displayStr;
-                else document.getElementById('timer-coach').innerText = displayStr;
-                
-                timeLeft--;
-                if (timeLeft < 0) {
-                    clearInterval(countdownInterval);
-                    if (myRole === 'student') {
-                        document.getElementById('answers-area').classList.add('hidden'); document.getElementById('student-text-answer-area').classList.add('hidden'); document.getElementById('student-status').innerText = "🛑 Hết thời gian làm bài!"; document.getElementById('timer').innerText = "00:00";
-                    } else document.getElementById('timer-coach').innerText = "Hết giờ!";
-                }
-            }, 1000);
-        }
-
-        function submitQuizAnswer(option) { document.getElementById('answers-area').classList.add('hidden'); document.getElementById('student-status').innerHTML = `🚀 Đã nộp đáp án: <span style="color:#007bff; font-weight:bold;">Câu ${option}</span>. Chờ thầy chữa bài!`; socket.emit('submit_answer', option); }
-        function confirmStudentTypedAnswer() { let typedAns = document.getElementById('student-typed-input').value.trim(); if (!typedAns) { alert("Em vui lòng gõ câu trả lời vào ô trống trước khi nộp bài!"); return; } document.getElementById('student-text-answer-area').classList.add('hidden'); document.getElementById('student-status').innerHTML = `🚀 Đã nộp đáp án: [<b>${typedAns}</b>]. Hệ thống đang chấm điểm!`; socket.emit('submit_answer', typedAns); }
-        
-        socket.on('student_already_submitted', () => { if (myRole === 'student') { document.getElementById('answers-area').classList.add('hidden'); document.getElementById('student-text-answer-area').classList.add('hidden'); document.getElementById('student-status').innerText = "🛑 Em đã nộp bài rồi! Ngồi đợi thầy chữa bài nhé."; }});
-        socket.on('coach_receive', (data) => { if (myRole === 'coach') { const logs = document.getElementById('coach-logs'); const statusSymbol = data.isCorrect ? "✅ ĐÚNG" : "❌ SAI"; logs.innerHTML += `<p style="margin:6px 0;">• Học trò <b>${data.name}</b> trả lời: [${data.answer}] -> <span style="color:${data.isCorrect ? '#27ae60' : '#c0392b'}; font-weight:bold;">${statusSymbol}</span> <span style="color:#7f8c8d; font-size:13px;">(sau ${data.timeSpent} s)</span></p>`; logs.scrollTop = logs.scrollHeight; }});
-        
-        function resetLeaderboard() { if(confirm("Xác nhận đưa điểm số cả lớp về lại 0?")) socket.emit('reset_scores'); }
-        
-        socket.on('update_leaderboard', (leaderboard) => {
-            const tbody = document.getElementById('leaderboard-body'); tbody.innerHTML = '';
-            let sortedArr = Object.entries(leaderboard).sort((a, b) => { if (b[1].points !== a[1].points) return b[1].points - a[1].points; return a[1].totalTime - b[1].totalTime; });
-            sortedArr.forEach((item, index) => {
-                tbody.innerHTML += `<tr ${index === 0 ? 'class="rank-1"' : ''}><td>Hạng ${index + 1}</td><td><b>${item[0]}</b></td><td><span style="background:#e8f8f5; padding:4px 10px; border-radius:15px; font-weight:bold; color:#117a65;">${item[1].points} Pts</span></td><td><span style="background:#fef9e7; padding:4px 10px; border-radius:15px; font-weight:bold; color:#b7950b;">${item[1].totalTime} s</span></td></tr>`;
-            });
-        });
     </script>
 </body>
 </html>

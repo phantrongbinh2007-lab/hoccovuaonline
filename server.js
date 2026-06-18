@@ -11,14 +11,14 @@ app.use(express.static('public'));
 let leaderboard = {}; 
 let answeredUsers = new Set(); 
 
-// TRẠNG THÁI TOÀN CỤC BỔ SUNG MẢNG LƯU TRỮ Ô MÀU ĐÁNH DẤU
 let globalGameState = {
-    mode: 'demo', 
+    mode: 'demo', // 'demo', 'quiz', hoặc 'simul'
     boardState: null, 
     currentTurn: 'w', 
     arrows: [], 
-    highlights: [], // Lưu trữ các ô đang được thầy tô màu đỏ
-    currentQuiz: null 
+    highlights: [], 
+    currentQuiz: null,
+    simulGames: {} // Kho lưu trữ N ván cờ đồng loạt { 'Tuấn Kiệt': { boardState, currentTurn, status... } }
 };
 
 io.on('connection', (socket) => {
@@ -34,10 +34,11 @@ io.on('connection', (socket) => {
         
         io.emit('update_leaderboard', leaderboard);
         
-        // Đồng bộ đầy đủ mảng ô màu cho học viên mới vào phòng
+        // Gửi toàn bộ trạng thái hệ thống cho người mới
         socket.emit('init_game_state', {
             ...globalGameState,
-            timeLeft: globalGameState.currentQuiz ? Math.round((globalGameState.currentQuiz.endTime - Date.now()) / 1000) : 0
+            timeLeft: globalGameState.currentQuiz ? Math.round((globalGameState.currentQuiz.endTime - Date.now()) / 1000) : 0,
+            mySimulGame: globalGameState.mode === 'simul' ? globalGameState.simulGames[socket.username] : null
         });
         
         if (globalGameState.mode === 'quiz' && answeredUsers.has(socket.username)) {
@@ -63,7 +64,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Đồng bộ danh sách ô màu từ HLV sang Học trò
     socket.on('coach_sync_highlights', (highlights) => {
         if (globalGameState.mode === 'demo') {
             globalGameState.highlights = highlights;
@@ -71,9 +71,58 @@ io.on('connection', (socket) => {
         }
     });
 
+    // ================= TÍNH NĂNG MỚI: ĐẤU ĐỒNG LOẠT (SIMUL) =================
+    socket.on('start_simul', (data) => {
+        globalGameState.mode = 'simul';
+        globalGameState.boardState = data.boardState;
+        globalGameState.simulGames = {};
+        
+        let coachColor = data.currentTurn; // Lấy lượt đi hiện tại của HLV làm mốc (Thường thầy cầm Trắng sẽ đi trước)
+
+        // Phân thân bàn cờ cho từng học trò đang có mặt trong Leaderboard
+        for (let studentName in leaderboard) {
+            globalGameState.simulGames[studentName] = {
+                boardState: JSON.parse(JSON.stringify(data.boardState)), // Copy độc lập
+                turn: data.currentTurn, // Trắng hay Đen đi tiếp
+                coachColor: coachColor,
+                lastMove: null
+            };
+        }
+
+        io.emit('simul_started', globalGameState.simulGames);
+    });
+
+    socket.on('coach_simul_move', (data) => {
+        if (globalGameState.mode === 'simul' && globalGameState.simulGames[data.student]) {
+            let game = globalGameState.simulGames[data.student];
+            game.boardState = data.boardState;
+            game.turn = game.turn === 'w' ? 'b' : 'w';
+            game.lastMove = data.moveStr;
+            
+            // Bắn trạng thái cập nhật xuống cho riêng học trò đó
+            io.emit('simul_update_student', { student: data.student, game: game });
+            // Cập nhật lại Trạm chỉ huy của HLV
+            io.emit('simul_update_coach_dashboard', globalGameState.simulGames);
+        }
+    });
+
+    socket.on('student_simul_move', (data) => {
+        if (globalGameState.mode === 'simul' && globalGameState.simulGames[socket.username]) {
+            let game = globalGameState.simulGames[socket.username];
+            game.boardState = data.boardState;
+            game.turn = game.turn === 'w' ? 'b' : 'w';
+            game.lastMove = data.moveStr;
+            
+            // Bắn cho học trò đó để khóa bảng
+            socket.emit('simul_update_student', { student: socket.username, game: game });
+            // Bắn lên Trạm chỉ huy của HLV để báo đèn xanh 🟢
+            io.emit('simul_update_coach_dashboard', globalGameState.simulGames);
+        }
+    });
+
+    // ================= CHẾ ĐỘ CÂU HỎI (QUIZ) =================
     socket.on('send_question', (data) => {
         let seconds = parseInt(data.seconds) || 30;
-        
         globalGameState.mode = 'quiz';
         globalGameState.currentQuiz = {
             type: data.type,
@@ -87,7 +136,6 @@ io.on('connection', (socket) => {
             startTime: Date.now(), 
             endTime: Date.now() + (seconds * 1000)
         };
-        
         answeredUsers.clear(); 
         io.emit('new_question', { ...globalGameState.currentQuiz, seconds: seconds });
     });
@@ -105,31 +153,20 @@ io.on('connection', (socket) => {
 
     socket.on('submit_answer', (selectedAnswer) => {
         if (socket.role === 'coach' || globalGameState.mode !== 'quiz') return; 
-
         if (answeredUsers.has(socket.username)) return; 
         answeredUsers.add(socket.username); 
 
         let timeSpent = Math.round((Date.now() - globalGameState.currentQuiz.startTime) / 1000);
-        if (timeSpent > globalGameState.currentQuiz.totalSeconds) {
-            timeSpent = globalGameState.currentQuiz.totalSeconds;
-        }
+        if (timeSpent > globalGameState.currentQuiz.totalSeconds) timeSpent = globalGameState.currentQuiz.totalSeconds;
 
         const isCorrect = globalGameState.currentQuiz && selectedAnswer.trim().toLowerCase() === globalGameState.currentQuiz.correctAnswer.trim().toLowerCase();
         
         if (leaderboard[socket.username] !== undefined) {
             leaderboard[socket.username].totalTime += timeSpent;
-            if (isCorrect) {
-                leaderboard[socket.username].points += 10;
-            }
+            if (isCorrect) leaderboard[socket.username].points += 10;
         }
 
-        io.emit('coach_receive', {
-            name: socket.username,
-            answer: selectedAnswer,
-            isCorrect: isCorrect,
-            timeSpent: timeSpent
-        });
-
+        io.emit('coach_receive', { name: socket.username, answer: selectedAnswer, isCorrect: isCorrect, timeSpent: timeSpent });
         io.emit('update_leaderboard', leaderboard);
     });
 
@@ -143,5 +180,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Hệ thống đang hoạt động ổn định tại cổng: ${PORT}`);
+    console.log(`Hệ thống Đa luồng đang hoạt động tại cổng: ${PORT}`);
 });
